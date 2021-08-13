@@ -1,0 +1,24 @@
+name: Test
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup submodule
+      run: git submodule update --init --recursive
+    - name: Install dependencies
+      run: make venv && . venv/bin/activate; pip install pytest pytest-cov
+    - name: Test with pytest
+      run: |
+        . venv/bin/activate; pytest --cov=tensorpac --cov-report=xml --cov-config=.github/workflows/coveragerc
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        env_vars: OS,PYTHON
+        name: codecov-umbrella
+        fail_ci_if_error: true

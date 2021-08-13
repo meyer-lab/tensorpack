@@ -14,8 +14,9 @@ def createCube():
 def test_R2X():
     """ Test to ensure R2X for higher components is larger. """
     arr = []
+    tensor, matrix = createCube()
     for i in range(1, 5):
-        facT = perform_CMTF(r=i)
+        facT = perform_CMTF(tensor, matrix, r=i)
         assert np.all(np.isfinite(facT.factors[0]))
         assert np.all(np.isfinite(facT.factors[1]))
         assert np.all(np.isfinite(facT.factors[2]))
@@ -37,7 +38,7 @@ def test_cp():
 def test_delete():
     """ Test deleting a component results in a valid tensor. """
     tOrig, mOrig = createCube()
-    facT = perform_CMTF(r=4)
+    facT = perform_CMTF(tOrig, mOrig, r=4)
 
     fullR2X = calcR2X(facT, tOrig, mOrig)
 
