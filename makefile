@@ -13,7 +13,7 @@ test: venv
 	. venv/bin/activate && pytest -s -v -x
 
 coverage.xml: venv
-	. venv/bin/activate && pytest --junitxml=junit.xml --cov=tfac --cov-report xml:coverage.xml
+	. venv/bin/activate && pytest --junitxml=junit.xml --cov=tensorpac --cov-report xml:coverage.xml
 
 clean:
 	rm -rf venv coverage.xml
