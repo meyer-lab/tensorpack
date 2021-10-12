@@ -5,7 +5,7 @@ import pandas as pd
 
 def pbsSubtractOriginal():
     """ Paper Background subtract, will keep all rows for any confusing result. """
-    Cov = pd.read_csv("syserol/data/ZoharCovData.csv", index_col=0)
+    Cov = pd.read_csv("tensorpac/Data/ZoharCovData.csv", index_col=0)
     # 23 (0-> 23) is the start of IgG1_S
     Demographics = Cov.iloc[:, 0:23]
     Serology = Cov.iloc[:, 23::]
