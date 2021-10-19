@@ -173,7 +173,7 @@ def initialize_cp(tensor: np.ndarray, matrix: np.ndarray, rank: int):
     unfold = tl.unfold(tensor, 1)
     unfold = unfold[:, np.all(np.isfinite(unfold), axis=0)]
     factors[1] = np.linalg.svd(unfold)[0]
-    factors[1] = factors[1][:, :rank]
+    factors[1] = factors[1].take(range(rank), axis=1, mode="wrap")
     return tl.cp_tensor.CPTensor((None, factors))
 
 
