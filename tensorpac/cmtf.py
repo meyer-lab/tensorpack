@@ -148,7 +148,7 @@ def cp_normalize(tFac):
     return tFac
 
 
-def initialize_cp(tensor: np.ndarray, matrix: np.ndarray, rank: int):
+def initialize_cmtf(tensor: np.ndarray, matrix: np.ndarray, rank: int):
     r"""Initialize factors used in `parafac`.
     Parameters
     ----------
@@ -177,12 +177,75 @@ def initialize_cp(tensor: np.ndarray, matrix: np.ndarray, rank: int):
     return tl.cp_tensor.CPTensor((None, factors))
 
 
-def perform_CMTF(tOrig, mOrig=None, r=9):
+def initialize_cp(tensor: np.ndarray, rank: int):
+    r"""Initialize factors used in `parafac`.
+    Parameters
+    ----------
+    tensor : ndarray
+    rank : int
+    Returns
+    -------
+    factors : CPTensor
+        An initial cp tensor.
+    """
+    factors = [np.ones((tensor.shape[i], rank)) for i in range(tensor.ndim)]
+
+    # SVD init mode whose size is larger than rank
+    for mode in range(tensor.ndim):
+        if tensor.shape[mode] >= rank:
+            unfold = tl.unfold(tensor, mode)
+
+            si = SoftImpute(J=rank) # Eventually replace with fancyimpute pkg
+            si.fit(unfold)
+
+            factors[mode] = si.u
+
+    return tl.cp_tensor.CPTensor((None, factors))
+
+
+def perform_CP(tOrig, r=6, tol=1e-6):
+    """ Perform CP decomposition. """
+    tFac = initialize_cp(tOrig, r)
+
+    # Pre-unfold
+    unfolded = [tl.unfold(tOrig, i) for i in range(tOrig.ndim)]
+
+    R2X_last = -np.inf
+    tFac.R2X = calcR2X(tFac, tOrig)
+
+    # Precalculate the missingness patterns
+    uniqueInfo = [np.unique(np.isfinite(B.T), axis=1, return_inverse=True) for B in unfolded]
+
+    for ii in range(2000):
+        # Solve on each mode
+        for m in range(len(tFac.factors)):
+            kr = khatri_rao(tFac.factors, skip_matrix=m)
+            tFac.factors[m] = censored_lstsq(kr, unfolded[m].T, uniqueInfo[m])
+
+        if ii % 2 == 0:
+            R2X_last = tFac.R2X
+            tFac.R2X = calcR2X(tFac, tOrig)
+            assert tFac.R2X > 0.0
+
+        if tFac.R2X - R2X_last < tol:
+            break
+
+    tFac = cp_normalize(tFac)
+    tFac = reorient_factors(tFac)
+
+    if r > 1:
+        tFac = sort_factors(tFac)
+    print(tFac.R2X)
+
+    return tFac
+
+
+def perform_CMTF(tOrig, mOrig=None, r=9, tol=1e-6):
     """ Perform CMTF decomposition. """
     assert tOrig.dtype == float
     if mOrig is not None:
         assert mOrig.dtype == float
-    tFac = initialize_cp(tOrig, mOrig, r)
+    tFac = initialize_cmtf(tOrig, mOrig, r)
 
     # Pre-unfold
     unfolded = np.hstack((tl.unfold(tOrig, 0), mOrig))
@@ -208,7 +271,7 @@ def perform_CMTF(tOrig, mOrig=None, r=9):
         R2X = calcR2X(tFac, tOrig, mOrig)
         assert R2X > 0.0
 
-        if R2X - R2X_last < 1e-6:
+        if R2X - R2X_last < tol:
             break
 
     tFac = cp_normalize(tFac)

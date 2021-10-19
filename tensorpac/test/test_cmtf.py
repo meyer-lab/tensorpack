@@ -3,18 +3,23 @@ Unit test file.
 """
 import numpy as np
 import tensorly as tl
+import warnings
 from tensorly.cp_tensor import _validate_cp_tensor
 from tensorly.random import random_cp
-from ..cmtf import perform_CMTF, delete_component, calcR2X, buildMat, sort_factors
+from ..cmtf import perform_CMTF, delete_component, calcR2X, buildMat, sort_factors, perform_CP
 
-def createCube():
-    return np.random.rand(10, 20, 25), np.random.rand(10, 15)
+def createCube(missing = 0.0):
+    tensor, matrix = np.random.rand(10, 20, 25), np.random.rand(10, 15)
+    if missing > 0.0:
+        tensor[np.random.rand(10, 20, 25) < missing] = np.nan
+        matrix[np.random.rand(10, 15) < missing] = np.nan
+    return tensor, matrix
 
 
-def test_R2X():
+def test_cmtf_R2X():
     """ Test to ensure R2X for higher components is larger. """
     arr = []
-    tensor, matrix = createCube()
+    tensor, matrix = createCube(missing = 0.2)
     for i in range(1, 5):
         facT = perform_CMTF(tensor, matrix, r=i)
         assert np.all(np.isfinite(facT.factors[0]))
@@ -27,14 +32,19 @@ def test_R2X():
     # confirm R2X is >= 0 and <=1
     assert np.min(arr) >= 0
     assert np.max(arr) <= 1
+    if arr[2] < 0.72:
+        warnings.warn("CMTF test case with 20% missingness has R2X lower than expected 0.72")
 
-"""
+
 def test_cp():
-    # Test that the CP decomposition code works. 
-    tensor, _ = createCube()
-    facT = perform_CMTF(tensor, r=6)
-"""
-
+    # Test that the CP decomposition code works.
+    tensor, _ = createCube(missing = 0.2)
+    fac3 = perform_CP(tensor, r=3)
+    fac6 = perform_CP(tensor, r=6)
+    assert fac3.R2X < fac6.R2X
+    assert fac3.R2X > 0.0
+    if fac3.R2X < 0.75:
+        warnings.warn("CP test case with 20% missingness has R2X lower than expected 0.75")
 
 
 def test_delete():
