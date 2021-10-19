@@ -148,7 +148,7 @@ def cp_normalize(tFac):
     return tFac
 
 
-def initialize_cp(tensor: np.ndarray, matrix: np.ndarray, rank: int):
+def initialize_cmtf(tensor: np.ndarray, matrix: np.ndarray, rank: int):
     r"""Initialize factors used in `parafac`.
     Parameters
     ----------
@@ -177,7 +177,7 @@ def initialize_cp(tensor: np.ndarray, matrix: np.ndarray, rank: int):
     return tl.cp_tensor.CPTensor((None, factors))
 
 
-def init_CPTAC(tensor: np.ndarray, rank: int):
+def initialize_cp(tensor: np.ndarray, rank: int):
     r"""Initialize factors used in `parafac`.
     Parameters
     ----------
@@ -189,23 +189,23 @@ def init_CPTAC(tensor: np.ndarray, rank: int):
         An initial cp tensor.
     """
     factors = [np.ones((tensor.shape[i], rank)) for i in range(tensor.ndim)]
-    # Skip mode 0. Too small to matter.
 
-    # SVD init mode 1
-    for mode in range(1, 3):
-        unfold = tl.unfold(tensor, mode)
+    # SVD init mode whose size is larger than rank
+    for mode in range(tensor.ndim):
+        if tensor.shape[mode] >= rank:
+            unfold = tl.unfold(tensor, mode)
 
-        si = SoftImpute(J=rank) # Eventually replace with fancyimpute pkg
-        si.fit(unfold)
+            si = SoftImpute(J=rank) # Eventually replace with fancyimpute pkg
+            si.fit(unfold)
 
-        factors[mode] = si.u
+            factors[mode] = si.u
 
     return tl.cp_tensor.CPTensor((None, factors))
 
 
-def CP_CPTAC(tOrig, r=6, tol=1e-6):
+def perform_cp(tOrig, r=6, tol=1e-6):
     """ Perform CP decomposition. """
-    tFac = init_CPTAC(tOrig, r)
+    tFac = initialize_cp(tOrig, r)
 
     # Pre-unfold
     unfolded = [tl.unfold(tOrig, i) for i in range(tOrig.ndim)]
@@ -235,18 +235,17 @@ def CP_CPTAC(tOrig, r=6, tol=1e-6):
 
     if r > 1:
         tFac = sort_factors(tFac)
-
     print(tFac.R2X)
 
     return tFac
 
 
-def perform_CMTF(tOrig, mOrig=None, r=9):
+def perform_CMTF(tOrig, mOrig=None, r=9, tol=1e-6):
     """ Perform CMTF decomposition. """
     assert tOrig.dtype == float
     if mOrig is not None:
         assert mOrig.dtype == float
-    tFac = initialize_cp(tOrig, mOrig, r)
+    tFac = initialize_cmtf(tOrig, mOrig, r)
 
     # Pre-unfold
     unfolded = np.hstack((tl.unfold(tOrig, 0), mOrig))
@@ -272,7 +271,7 @@ def perform_CMTF(tOrig, mOrig=None, r=9):
         R2X = calcR2X(tFac, tOrig, mOrig)
         assert R2X > 0.0
 
-        if R2X - R2X_last < 1e-6:
+        if R2X - R2X_last < tol:
             break
 
     tFac = cp_normalize(tFac)
