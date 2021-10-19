@@ -203,7 +203,7 @@ def initialize_cp(tensor: np.ndarray, rank: int):
     return tl.cp_tensor.CPTensor((None, factors))
 
 
-def perform_cp(tOrig, r=6, tol=1e-6):
+def perform_CP(tOrig, r=6, tol=1e-6):
     """ Perform CP decomposition. """
     tFac = initialize_cp(tOrig, r)
 
