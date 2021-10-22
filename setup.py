@@ -6,4 +6,4 @@ setup(name='tensorPack',
       url='https://github.com/meyer-lab/tensorPack',
       license='MIT',
       packages=find_packages(exclude=['doc']),
-      install_requires=['numpy', 'tensorly'])
+      install_requires=['numpy', 'tensorly', 'fancyimpute'])
