@@ -7,7 +7,7 @@ import tensorly as tl
 from tensorly.tenalg import khatri_rao
 from copy import deepcopy
 from tensorly.decomposition._cp import initialize_cp, parafac
-from .soft_impute import SoftImpute
+from fancyimpute import SoftImpute
 
 
 tl.set_backend('numpy')
@@ -165,10 +165,11 @@ def initialize_cmtf(tensor: np.ndarray, matrix: np.ndarray, rank: int):
     unfold = tl.unfold(tensor, 0)
     unfold = np.hstack((unfold, matrix))
 
-    si = SoftImpute(J=rank)
-    si.fit(unfold)
+    if np.sum(~np.isfinite(unfold)) > 0:
+        si = SoftImpute(max_rank=rank)
+        unfold = si.fit_transform(unfold)
 
-    factors[0] = si.u
+    factors[0] = np.linalg.svd(unfold)[0][:, :rank]
 
     unfold = tl.unfold(tensor, 1)
     unfold = unfold[:, np.all(np.isfinite(unfold), axis=0)]
@@ -189,16 +190,17 @@ def initialize_cp(tensor: np.ndarray, rank: int):
         An initial cp tensor.
     """
     factors = [np.ones((tensor.shape[i], rank)) for i in range(tensor.ndim)]
+    contain_missing = (np.sum(~np.isfinite(tensor)) > 0)
 
     # SVD init mode whose size is larger than rank
     for mode in range(tensor.ndim):
         if tensor.shape[mode] >= rank:
             unfold = tl.unfold(tensor, mode)
+            if contain_missing:
+                si = SoftImpute(max_rank=rank)
+                unfold = si.fit_transform(unfold)
 
-            si = SoftImpute(J=rank) # Eventually replace with fancyimpute pkg
-            si.fit(unfold)
-
-            factors[mode] = si.u
+            factors[mode] = np.linalg.svd(unfold)[0][:, :rank]
 
     return tl.cp_tensor.CPTensor((None, factors))
 
