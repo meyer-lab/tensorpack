@@ -9,7 +9,6 @@ from copy import deepcopy
 from tensorly.decomposition._cp import initialize_cp, parafac
 from fancyimpute import SoftImpute
 from scipy.optimize import minimize
-from .cp import cp_normalize
 
 
 tl.set_backend('numpy')
