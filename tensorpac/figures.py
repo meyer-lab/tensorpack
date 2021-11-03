@@ -1,4 +1,7 @@
 import seaborn as sns
+import pandas as pd
+import numpy as np
+import pickle
 
 """
 pickle file contains two arrays:
@@ -7,9 +10,14 @@ tensor_rs = [y1, y2, ... ,yr]
 """
 
 def plot_r2x(pickle_file):
-    # figure 2a in MSB
-    # Ethan
-    pass
+    with open(pickle_file, 'rb') as f:
+        pickle.dump(pca_rs, f)
+        pickle.dump(tensor_rs, f)
+    r2x_data = pd.DataFrame({'Number of Components': list(range(1, len(pca_rs)+1)) + list(range(1, len(tensor_rs)+1)),
+                               'R2X': np.hstack(pca_rs, tensor_rs),
+                               'Method': ['PCA'] * len(pca_rs) + ['Tensor'] * len(tensor_rs)})
+    pl = sns.scatterplot(data=r2x_data, x='Number of Components', y='R2X', hue='Method')
+    pl.set(ylim=(0.0, 1.0))
     return pl
 
 def plot_reduction(pickle_file):
