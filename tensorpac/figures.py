@@ -14,7 +14,7 @@ def plot_r2x(pickle_file):
         pickle.dump(pca_rs, f)
         pickle.dump(tensor_rs, f)
     r2x_data = pd.DataFrame({'Number of Components': list(range(1, len(pca_rs)+1)) + list(range(1, len(tensor_rs)+1)),
-                               'R2X': np.hstack(pca_rs, tensor_rs),
+                               'R2X': np.hstack(pca_rs.R2X, tensor_rs.R2X),
                                'Method': ['PCA'] * len(pca_rs) + ['Tensor'] * len(tensor_rs)})
     pl = sns.scatterplot(data=r2x_data, x='Number of Components', y='R2X', hue='Method')
     pl.set(ylim=(0.0, 1.0))

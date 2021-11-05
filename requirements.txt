@@ -19,5 +19,3 @@ six==1.16.0
 statsmodels==0.12.2
 tensorly==0.6.0
 toml==0.10.2
-
-git+https://github.com/meyer-lab/tensorPack.git@main
