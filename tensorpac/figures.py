@@ -13,8 +13,9 @@ def plot_r2x(pickle_file):
     with open(pickle_file, 'rb') as f:
         pickle.dump(pca_rs, f)
         pickle.dump(tensor_rs, f)
+    r2x_list = [pca_rs[r].R2X for r in pca_rs, tensor_rs[r].R2X for r in tensor_rs]
     r2x_data = pd.DataFrame({'Number of Components': list(range(1, len(pca_rs)+1)) + list(range(1, len(tensor_rs)+1)),
-                               'R2X': np.hstack(pca_rs.R2X, tensor_rs.R2X),
+                               'R2X': r2x_list,
                                'Method': ['PCA'] * len(pca_rs) + ['Tensor'] * len(tensor_rs)})
     pl = sns.scatterplot(data=r2x_data, x='Number of Components', y='R2X', hue='Method')
     pl.set(ylim=(0.0, 1.0))
@@ -27,12 +28,12 @@ def plot_reduction(pickle_file):
     file = open(pickle_file, 'rb')
     object_file = pickle.load(pickle_file)
     pca_rs, tensor_rs = object_file
-    
+
     tFacSize = list(tensor_rs.shape[0]*i for i in range(1,tensor_rs.shape[1]+1))
     PCSize = list(pca_rs.shape[0]*i for i in range(1,pca_rs.shape[1]+1))
 
 
-    
+
     pass
     return pl
 
