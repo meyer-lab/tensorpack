@@ -23,6 +23,16 @@ def plot_r2x(pickle_file):
 def plot_reduction(pickle_file):
     # figure 2b in MSB
     # Enio
+
+    file = open(pickle_file, 'rb')
+    object_file = pickle.load(pickle_file)
+    pca_rs, tensor_rs = object_file
+    
+    tFacSize = list(tensor_rs.shape[0]*i for i in range(1,tensor_rs.shape[1]+1))
+    PCSize = list(pca_rs.shape[0]*i for i in range(1,pca_rs.shape[1]+1))
+
+
+    
     pass
     return pl
 
