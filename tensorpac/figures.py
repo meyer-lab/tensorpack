@@ -10,6 +10,9 @@ tensor_rs = [y1, y2, ... ,yr]
 """
 
 def plot_r2x(pickle_file):
+    # figure 2a in MSB
+    # Ethan
+
     with open(pickle_file, 'rb') as f:
         pickle.dump(pca_rs, f)
         pickle.dump(tensor_rs, f)
