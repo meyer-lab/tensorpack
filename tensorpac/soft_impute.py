@@ -28,20 +28,6 @@ class Solver(object):
         self.max_value = max_value
         self.normalizer = normalizer
 
-    def __repr__(self):
-        return str(self)
-
-    def __str__(self):
-        field_list = []
-        for (k, v) in sorted(self.__dict__.items()):
-            if v is None or isinstance(v, (float, int)):
-                field_list.append("%s=%s" % (k, v))
-            elif isinstance(v, str):
-                field_list.append("%s='%s'" % (k, v))
-        return "%s(%s)" % (
-            self.__class__.__name__,
-            ", ".join(field_list))
-
     def _check_input(self, X):
         if len(X.shape) != 2:
             raise ValueError("Expected 2d matrix, got %s array" % (X.shape,))
@@ -173,11 +159,6 @@ class Solver(object):
         X_result = self.project_result(X=X_result)
         X_result[observed_mask] = X_original[observed_mask]
         return X_result
-
-
-def masked_mae(X_true, X_pred, mask):
-    masked_diff = X_true[mask] - X_pred[mask]
-    return np.mean(np.abs(masked_diff))
 
 
 class SoftImpute(Solver):
@@ -327,10 +308,8 @@ class SoftImpute(Solver):
 
             # print error on observed data
             if self.verbose:
-                mae = masked_mae(
-                    X_true=X_init,
-                    X_pred=X_reconstruction,
-                    mask=observed_mask)
+                masked_diff = X_init[observed_mask] - X_reconstruction[observed_mask]
+                mae = np.mean(np.abs(masked_diff))
                 print(
                     "[SoftImpute] Iter %d: observed MAE=%0.6f rank=%d" % (
                         i + 1,
