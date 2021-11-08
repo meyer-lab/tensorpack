@@ -2,18 +2,11 @@
 
 all: test
 
-venv: venv/bin/activate
+test:
+	poetry run pytest -s -v -x
 
-venv/bin/activate: requirements.txt
-	test -d venv || virtualenv venv
-	. venv/bin/activate && pip install --prefer-binary -Uqr requirements.txt
-	touch venv/bin/activate
-
-test: venv
-	. venv/bin/activate && pytest -s -v -x
-
-coverage.xml: venv
-	. venv/bin/activate && pytest --junitxml=junit.xml --cov=tensorpac --cov-report xml:coverage.xml
+coverage.xml:
+	poetry run pytest --junitxml=junit.xml --cov=tensorpac --cov-report xml:coverage.xml
 
 clean:
-	rm -rf venv coverage.xml
+	rm -rf coverage.xml
