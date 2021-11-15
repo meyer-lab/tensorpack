@@ -13,9 +13,7 @@ from .figureCommon import subplotLabel, getSetup
 from matplotlib.ticker import ScalarFormatter
 
 
-comps = np.arange(1, 12)
-
-def plot_r2x(ax, CMTFR2X):
+def plot_r2x(ax, CMTFR2X, comps):
     # figure 2a in MSB
     ax.scatter(comps, CMTFR2X, s=10)
     ax.set_ylabel("CMTF R2X")
@@ -29,19 +27,19 @@ def plot_r2x(ax, CMTFR2X):
 
 def plot_reduction(ax, CMTFR2X, PCAR2X, sizeTfac, sizePCA):
     # figure 2b in MSB
-    ax[1].set_xscale("log", base=2)
-    ax[1].plot(sizeTfac, 1.0 - CMTFR2X, ".", label="CMTF")
-    ax[1].plot(sizePCA, 1.0 - PCAR2X, ".", label="PCA")
-    ax[1].set_ylabel("Normalized Unexplained Variance")
-    ax[1].set_xlabel("Size of Reduced Data")
-    ax[1].set_ylim(bottom=0.0)
-    ax[1].set_xlim(2 ** 8, 2 ** 12)
-    ax[1].xaxis.set_major_formatter(ScalarFormatter())
-    ax[1].legend()
+    ax.set_xscale("log", base=2)
+    ax.plot(sizeTfac, 1.0 - CMTFR2X, ".", label="CMTF")
+    ax.plot(sizePCA, 1.0 - PCAR2X, ".", label="PCA")
+    ax.set_ylabel("Normalized Unexplained Variance")
+    ax.set_xlabel("Size of Reduced Data")
+    ax.set_ylim(bottom=0.0)
+    ax.set_xlim(2 ** 8, 2 ** 12)
+    ax.xaxis.set_major_formatter(ScalarFormatter())
+    ax.legend()
 
     pass
 
-def plot_q2x_chord(ax, csv_file):
+def plot_q2x_chord(ax, csv_file, comps):
     # figure 3a in MSB
     chords_df = pd.read_csv(csv_file)
     chords_df = chords_df.groupby('Components').agg({'R2X': ['mean', 'sem']})
@@ -58,7 +56,7 @@ def plot_q2x_chord(ax, csv_file):
 
     pass
 
-def plot_q2x_entries(ax, csv_file):
+def plot_q2x_entries(ax, csv_file, comps):
     # figure 3b in MSB
     single_df = pd.read_csv(csv_file)
     single_df = single_df.groupby(['Components']).agg(['mean', 'sem'])
