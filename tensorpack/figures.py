@@ -15,10 +15,10 @@ from matplotlib.ticker import ScalarFormatter
 
 comps = np.arange(1, 12)
 
-def plot_r2x(ax, CMTFR2X):
+def plot_r2x(ax, decomp):
     # figure 2a in MSB
-    ax.scatter(comps, CMTFR2X, s=10)
-    ax.set_ylabel("CMTF R2X")
+    ax.scatter(comps, decomp.TR2X, s=10)
+    ax.set_ylabel("Tensor Fac R2X")
     ax.set_xlabel("Number of Components")
     ax.set_xticks([x for x in comps])
     ax.set_xticklabels([x for x in comps])
@@ -41,9 +41,9 @@ def plot_reduction(ax, CMTFR2X, PCAR2X, sizeTfac, sizePCA):
 
     pass
 
-def plot_q2x_chord(ax, csv_file):
+def plot_q2x_chord(ax, decomp):
     # figure 3a in MSB
-    chords_df = pd.read_csv(csv_file)
+    chords_df = decomp.chordQ2X
     chords_df = chords_df.groupby('Components').agg({'R2X': ['mean', 'sem']})
 
     Q2Xchord = chords_df['R2X']['mean']
