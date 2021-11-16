@@ -8,13 +8,13 @@ tensor_rs = [y1, y2, ... ,yr]
 
 import numpy as np
 import pandas as pd
-from statsmodels.multivariate.pca import PCA
 from .figureCommon import subplotLabel, getSetup
 from matplotlib.ticker import ScalarFormatter
 
 
 def plot_r2x(ax, decomp):
     # figure 2a in MSB
+    comps = decomp.comps
     ax.scatter(comps, decomp.TR2X, s=10)
     ax.set_ylabel("Tensor Fac R2X")
     ax.set_xlabel("Number of Components")
@@ -25,8 +25,9 @@ def plot_r2x(ax, decomp):
 
     pass
 
-def plot_reduction(ax, CMTFR2X, PCAR2X, sizeTfac, sizePCA):
+def plot_reduction(ax, decomp):
     # figure 2b in MSB
+    CMTFR2X, PCAR2X, sizeTfac, sizePCA = decomp # find attributes
     ax.set_xscale("log", base=2)
     ax.plot(sizeTfac, 1.0 - CMTFR2X, ".", label="CMTF")
     ax.plot(sizePCA, 1.0 - PCAR2X, ".", label="PCA")
@@ -42,6 +43,7 @@ def plot_reduction(ax, CMTFR2X, PCAR2X, sizeTfac, sizePCA):
 def plot_q2x_chord(ax, decomp):
     # figure 3a in MSB
     chords_df = decomp.chordQ2X
+    comps = decomp.comps
     chords_df = chords_df.groupby('Components').agg({'R2X': ['mean', 'sem']})
 
     Q2Xchord = chords_df['R2X']['mean']
@@ -56,9 +58,10 @@ def plot_q2x_chord(ax, decomp):
 
     pass
 
-def plot_q2x_entries(ax, csv_file, comps):
+def plot_q2x_entries(ax, decomp):
     # figure 3b in MSB
-    single_df = pd.read_csv(csv_file)
+    single_df = decomp.entryQ2X
+    comps = decomp.comps
     single_df = single_df.groupby(['Components']).agg(['mean', 'sem'])
 
     CMTFR2X = single_df['CMTF']['mean']
@@ -78,7 +81,6 @@ def plot_q2x_entries(ax, csv_file, comps):
 
     pass
 
-def plot_weights(pickle_file):
+def plot_weights(decomp):
     # figure 5 in MSB
     pass
-    return pl
