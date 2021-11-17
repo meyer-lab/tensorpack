@@ -6,11 +6,12 @@ authors = ["Your Name <you@example.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9,<3.11"
 numpy = "^1.21"
 scipy = "^1.7"
 statsmodels = "^0.13"
 tensorly = "^0.7"
+scikit-learn = "^1.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
