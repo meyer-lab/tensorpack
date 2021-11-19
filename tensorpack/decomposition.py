@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from .cmtf import perform_CP
+from .cmtf import perform_CP, calcR2X
 from statsmodels.multivariate.pca import PCA
 
 class decomposition():
@@ -13,12 +13,18 @@ class decomposition():
     def perform_decomp(self):
         self.tfac = [self.method(self.data, r=rr) for rr in self.comps]
         self.TR2X = [c.R2X for c in self.tfac]
-        self.sizeT = []
+        self.sizeT = [rr*sum(self.tfac[0].shape) for rr in self.comps]
 
     def perform_PCA(self):
         ## insert PCA here
-        self.PCAR2X = []
-        self.sizePCA = []
+        ## Assumes to keep dim=1 same
+        dataShape = self.data.shape
+        flatData = np.reshape(self.data, (dataShape[0]*dataShape[2] , dataShape[1]))
+
+        self.PCA = [PCA(flatData, ncomp=rr, missing='fill-em', standardize=False, demean=False, normalize=False) for rr in self.comps]
+        recon = [c.scores @ c.loadings.T for c in self.PCA]
+        self.PCAR2X = [calcR2X(c, mIn = flatData) for c in recon]
+        self.sizePCA = [sum(flatData.shape)*rr for rr in self.comps]
         pass
 
     def Q2X_chord(self, drop=10, repeat=10):

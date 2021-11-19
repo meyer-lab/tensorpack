@@ -27,9 +27,9 @@ def plot_r2x(ax, decomp):
 
 def plot_reduction(ax, decomp):
     # figure 2b in MSB
-    CMTFR2X, PCAR2X, sizeTfac, sizePCA = decomp # find attributes
+    CPR2X, PCAR2X, sizeTfac, sizePCA = np.asarray(decomp.TR2X), np.asarray(decomp.PCAR2X), decomp.sizeT, decomp.sizePCA # find attributes
     ax.set_xscale("log", base=2)
-    ax.plot(sizeTfac, 1.0 - CMTFR2X, ".", label="CMTF")
+    ax.plot(sizeTfac, 1.0 - CPR2X, ".", label="CP")
     ax.plot(sizePCA, 1.0 - PCAR2X, ".", label="PCA")
     ax.set_ylabel("Normalized Unexplained Variance")
     ax.set_xlabel("Size of Reduced Data")
