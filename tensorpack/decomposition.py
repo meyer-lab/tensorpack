@@ -3,17 +3,17 @@ import pandas as pd
 from .cmtf import perform_CP, calcR2X
 from statsmodels.multivariate.pca import PCA
 
-class decomposition():
-    def __init__(self, data):
+class Decomposition():
+    def __init__(self, data, max_rr=6):
         self.data = data
         self.method = perform_CP
-        self.comps = np.arange(1, 6)
+        self.rrs = np.arange(1, max_rr)
         pass
 
     def perform_decomp(self):
-        self.tfac = [self.method(self.data, r=rr) for rr in self.comps]
+        self.tfac = [self.method(self.data, r=rr) for rr in self.rrs]
         self.TR2X = [c.R2X for c in self.tfac]
-        self.sizeT = [rr*sum(self.tfac[0].shape) for rr in self.comps]
+        self.sizeT = [rr * sum(self.tfac[0].shape) for rr in self.rrs]
 
     def perform_PCA(self):
         ## insert PCA here
@@ -21,10 +21,10 @@ class decomposition():
         dataShape = self.data.shape
         flatData = np.reshape(self.data, (dataShape[0]*dataShape[2] , dataShape[1]))
 
-        self.PCA = [PCA(flatData, ncomp=rr, missing='fill-em', standardize=False, demean=False, normalize=False) for rr in self.comps]
+        self.PCA = [PCA(flatData, ncomp=rr, missing='fill-em', standardize=False, demean=False, normalize=False) for rr in self.rrs]
         recon = [c.scores @ c.loadings.T for c in self.PCA]
         self.PCAR2X = [calcR2X(c, mIn = flatData) for c in recon]
-        self.sizePCA = [sum(flatData.shape)*rr for rr in self.comps]
+        self.sizePCA = [sum(flatData.shape) * rr for rr in self.rrs]
         pass
 
     def Q2X_chord(self, drop=10, repeat=10):
