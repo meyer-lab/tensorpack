@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tensorpack"
-version = "0.1.0"
+version = "0.0.2"
 description = "A collection of tensor methods from the Meyer lab."
 authors = ["Your Name <you@example.com>"]
 license = "MIT"
