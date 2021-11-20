@@ -1,18 +1,17 @@
-import seaborn as sns
-
 """
-pickle file contains two arrays:
-pca_rs = [x1, x2, ... ,xr]
-tensor_rs = [y1, y2, ... ,yr]
+This file makes all standard plots for tensor analysis
 """
 
 import numpy as np
 import pandas as pd
 from matplotlib.ticker import ScalarFormatter
+from .decomposition import Decomposition
 
 
-def plot_r2x(ax, decomp):
-    # figure 2a in MSB
+def tfacr2x(ax, decomp: Decomposition):
+    """
+    Plot R2X of tensor decomp with more components
+    """
     comps = decomp.rrs
     ax.scatter(comps, decomp.TR2X, s=10)
     ax.set_ylabel("Tensor Fac R2X")
@@ -25,24 +24,23 @@ def plot_r2x(ax, decomp):
 
     pass
 
-def plot_reduction(ax, decomp):
+def reduction(ax, decomp):
     # figure 2b in MSB
     # find attributes
     CPR2X, PCAR2X, sizeTfac, sizePCA = np.asarray(decomp.TR2X), np.asarray(decomp.PCAR2X), decomp.sizeT, decomp.sizePCA
     ax.set_xscale("log", base=2)
-    ax.plot(sizeTfac, 1.0 - CPR2X, ".", label="CP")
+    ax.plot(sizeTfac, 1.0 - CPR2X, ".", label="Tensor")
     ax.plot(sizePCA, 1.0 - PCAR2X, ".", label="PCA")
     ax.set_ylabel("Normalized Unexplained Variance")
     ax.set_xlabel("Size of Reduced Data")
-    ax.set_title("Data reduction, tensor vs. PCA")
+    ax.set_title("Data reduction, Tensor vs. PCA")
     ax.set_ylim(bottom=0.0)
-    #ax.set_xlim(2 ** 8, 2 ** 12)
     ax.xaxis.set_major_formatter(ScalarFormatter())
     ax.legend()
 
     pass
 
-def plot_q2x_chord(ax, decomp):
+def q2xchord(ax, decomp):
     # figure 3a in MSB
     chords_df = decomp.chordQ2X
     comps = decomp.rrs
@@ -60,7 +58,7 @@ def plot_q2x_chord(ax, decomp):
 
     pass
 
-def plot_q2x_entries(ax, decomp):
+def q2xentry(ax, decomp):
     # figure 3b in MSB
     single_df = decomp.entryQ2X
     comps = decomp.rrs

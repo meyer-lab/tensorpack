@@ -64,6 +64,6 @@ def sample_figure():
     atyeo = Decomposition(createCube())
     atyeo.perform_decomp()
     atyeo.perform_PCA()
-    plot_reduction(ax[1], atyeo)
-    plot_reduction(ax[1], atyeo)
+    tfacr2x(ax[0], atyeo)
+    reduction(ax[1], atyeo)
     return f
