@@ -2,6 +2,9 @@ from os.path import join, dirname
 import numpy as np
 import pandas as pd
 from ..cmtf import perform_CP
+from ..figureCommon import subplotLabel, getSetup
+from ..plot import *
+from ..decomposition import Decomposition
 
 path_here = dirname(dirname(__file__))
 
@@ -56,8 +59,11 @@ def createCube():
 
     return cube 
 
-def fac():
-    cube = createCube()
-    comps = np.arange(1, 6)
-    CPs = [perform_CP(cube, r=rr).R2X for rr in comps]
-
+def sample_figure():
+    ax, f = getSetup((8, 5), (2, 3))
+    atyeo = Decomposition(createCube())
+    atyeo.perform_tfac()
+    atyeo.perform_PCA()
+    tfacr2x(ax[0], atyeo)
+    reduction(ax[1], atyeo)
+    return f
