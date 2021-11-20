@@ -10,7 +10,7 @@ class Decomposition():
         self.rrs = np.arange(1, max_rr)
         pass
 
-    def perform_decomp(self):
+    def perform_tfac(self):
         self.tfac = [self.method(self.data, r=rr) for rr in self.rrs]
         self.TR2X = [c.R2X for c in self.tfac]
         self.sizeT = [rr * sum(self.tfac[0].shape) for rr in self.rrs]
