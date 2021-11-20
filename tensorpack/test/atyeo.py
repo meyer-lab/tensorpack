@@ -62,7 +62,7 @@ def createCube():
 def sample_figure():
     ax, f = getSetup((8, 5), (2, 3))
     atyeo = Decomposition(createCube())
-    atyeo.perform_decomp()
+    atyeo.perform_tfac()
     atyeo.perform_PCA()
     tfacr2x(ax[0], atyeo)
     reduction(ax[1], atyeo)

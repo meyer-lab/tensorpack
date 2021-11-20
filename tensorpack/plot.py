@@ -22,23 +22,23 @@ def tfacr2x(ax, decomp: Decomposition):
     ax.set_ylim(0, 1)
     ax.set_xlim(0.5, np.amax(comps) + 0.5)
 
-    pass
 
 def reduction(ax, decomp):
-    # figure 2b in MSB
+    """
+    Plot the reduced dataset size vs. (1-R2X), TFac vs. PCA
+    """
     # find attributes
     CPR2X, PCAR2X, sizeTfac, sizePCA = np.asarray(decomp.TR2X), np.asarray(decomp.PCAR2X), decomp.sizeT, decomp.sizePCA
     ax.set_xscale("log", base=2)
-    ax.plot(sizeTfac, 1.0 - CPR2X, ".", label="Tensor")
+    ax.plot(sizeTfac, 1.0 - CPR2X, ".", label="TFac")
     ax.plot(sizePCA, 1.0 - PCAR2X, ".", label="PCA")
     ax.set_ylabel("Normalized Unexplained Variance")
     ax.set_xlabel("Size of Reduced Data")
-    ax.set_title("Data reduction, Tensor vs. PCA")
+    ax.set_title("Data reduction, TFac vs. PCA")
     ax.set_ylim(bottom=0.0)
     ax.xaxis.set_major_formatter(ScalarFormatter())
     ax.legend()
 
-    pass
 
 def q2xchord(ax, decomp):
     # figure 3a in MSB
