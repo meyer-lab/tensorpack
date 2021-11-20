@@ -8,7 +8,6 @@ tensor_rs = [y1, y2, ... ,yr]
 
 import numpy as np
 import pandas as pd
-from .figureCommon import subplotLabel, getSetup
 from matplotlib.ticker import ScalarFormatter
 
 
