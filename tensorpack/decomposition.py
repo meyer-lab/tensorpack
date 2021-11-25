@@ -1,7 +1,10 @@
+import pickle
 import numpy as np
 import pandas as pd
-from .cmtf import perform_CP, calcR2X
+from statsmodels.multivariate.pca import PCA
 from sklearn.decomposition import TruncatedSVD
+from .cmtf import perform_CP, calcR2X
+
 
 class Decomposition():
     def __init__(self, data, max_rr=6):
@@ -34,5 +37,14 @@ class Decomposition():
     def Q2X_entry(self, drop=10, repeat=10):
         self.entryQ2X = None  # df
         pass
+
+    def save(self, pfile):
+        with open(pfile, "wb") as output_file:
+            pickle.dump(self.__dict__, output_file)
+
+    def load(self, pfile):
+        with open(pfile, "rb") as input_file:
+            tmp_dict = pickle.load(input_file)
+            self.__dict__.update(tmp_dict)
 
     pass
