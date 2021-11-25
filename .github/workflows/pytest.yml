@@ -19,6 +19,8 @@ jobs:
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+    - name: Install dependencies
+      run: poetry install --no-root
     - name: Test with pytest
       run: make coverage.xml
     - name: Upload coverage to Codecov
