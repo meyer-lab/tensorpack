@@ -1,7 +1,6 @@
 import pickle
 import numpy as np
 import pandas as pd
-from statsmodels.multivariate.pca import PCA
 from sklearn.decomposition import TruncatedSVD
 from .cmtf import perform_CP, calcR2X
 
