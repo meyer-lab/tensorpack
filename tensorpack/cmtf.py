@@ -245,7 +245,7 @@ def perform_CP(tOrig, r=6, tol=1e-6):
     return tFac
 
 
-def perform_CMTF(tOrig, mOrig=None, r=9, tol=1e-6):
+def perform_CMTF(tOrig, mOrig=None, r=9, tol=1e-6, maxiter=50):
     """ Perform CMTF decomposition. """
     assert tOrig.dtype == float
     if mOrig is not None:
@@ -260,9 +260,9 @@ def perform_CMTF(tOrig, mOrig=None, r=9, tol=1e-6):
     # Precalculate the missingness patterns
     uniqueInfo = np.unique(np.isfinite(unfolded.T), axis=1, return_inverse=True)
 
-    for _ in range(40):
+    for _ in range(maxiter):
         tensor = np.nan_to_num(tOrig) + tl.cp_to_tensor(tFac) * np.isnan(tOrig)
-        tFac = parafac(tensor, r, 200, init=tFac, verbose=False, fixed_modes=[0], mask=np.isfinite(tOrig))
+        tFac = parafac(tensor, r, 200, init=tFac, verbose=False, fixed_modes=[0], mask=np.isfinite(tOrig), linesearch=True, tol=1e-9)
 
         # Solve for the glycan matrix fit
         tFac.mFactor = np.linalg.lstsq(tFac.factors[0][missingM, :], mOrig[missingM, :], rcond=-1)[0].T
