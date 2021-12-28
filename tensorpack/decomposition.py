@@ -1,8 +1,33 @@
 import pickle
 import numpy as np
 import pandas as pd
+from numpy.linalg import norm
 from sklearn.decomposition import TruncatedSVD
 from .cmtf import perform_CP, calcR2X
+
+
+def impute_missing_mat(dat):
+    miss_idx = np.where(~np.isfinite(dat))
+    if len(miss_idx[0]) <= 0:
+        return dat
+    assert np.all(np.any(np.isfinite(dat), axis=0)), "Cannot impute if an entire column is empty"
+    assert np.all(np.any(np.isfinite(dat), axis=1)), "Cannot impute if an entire row is empty"
+
+    imp = np.copy(dat)
+    col_mean = np.nanmean(dat, axis=0, keepdims=True)
+    imp[miss_idx] = np.take(col_mean, miss_idx[1])
+
+    diff = 1.0
+    while diff > 1e-3:
+        tsvd = TruncatedSVD(n_components=min(dat.shape)-1)
+        scores = tsvd.fit_transform(imp)
+        loadings = tsvd.components_
+        recon = scores @ loadings
+        new_diff = norm(imp[miss_idx] - recon[miss_idx]) / norm(recon[miss_idx])
+        assert new_diff < diff, "Matrix imputation difference is not decreasing"
+        diff = new_diff
+        imp[miss_idx] = recon[miss_idx]
+    return imp
 
 
 class Decomposition():
@@ -20,6 +45,8 @@ class Decomposition():
     def perform_PCA(self, flattenon=0):
         dataShape = self.data.shape
         flatData = np.reshape(np.moveaxis(self.data, flattenon, 0), (dataShape[flattenon], -1))
+        if not np.all(np.isfinite(flatData)):
+            flatData = impute_missing_mat(flatData)
 
         tsvd = TruncatedSVD(n_components=max(self.rrs))
         scores = tsvd.fit_transform(flatData)
