@@ -16,7 +16,7 @@ tl.set_backend('numpy')
 
 def buildMat(tFac):
     """ Build the matrix in CMTF from the factors. """
-    return tFac.factors[0] @ tFac.mFactor.T
+    return tFac.factors[0] @ (tFac.mFactor * tFac.mWeights).T
 
 
 def calcR2X(tFac, tIn=None, mIn=None):
@@ -142,7 +142,9 @@ def cp_normalize(tFac):
         scales = np.linalg.norm(factor, ord=np.inf, axis=0)
         tFac.weights *= scales
         if i == 0 and hasattr(tFac, 'mFactor'):
-            tFac.mFactor *= scales
+            mScales = np.linalg.norm(tFac.mFactor, ord=np.inf, axis=0)
+            tFac.mWeights = scales * mScales
+            tFac.mFactor /= mScales
 
         tFac.factors[i] /= scales
 
