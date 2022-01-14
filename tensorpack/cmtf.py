@@ -16,7 +16,9 @@ tl.set_backend('numpy')
 
 def buildMat(tFac):
     """ Build the matrix in CMTF from the factors. """
-    return tFac.factors[0] @ (tFac.mFactor * tFac.mWeights).T
+    if hasattr(tFac, 'mWeights'):
+        return tFac.factors[0] @ (tFac.mFactor * tFac.mWeights).T
+    return tFac.factors[0] @ tFac.mFactor.T
 
 
 def calcR2X(tFac, tIn=None, mIn=None):
@@ -78,7 +80,7 @@ def sort_factors(tFac):
 
     # Add the variance of the matrix
     if hasattr(tFac, 'mFactor'):
-        norm += np.sum(np.square(tFac.factors[0]), axis=0) * np.sum(np.square(tFac.mFactor), axis=0)
+        norm += np.sum(np.square(tFac.factors[0]), axis=0) * np.sum(np.square(tFac.mFactor), axis=0) * tFac.mWeights
 
     order = np.flip(np.argsort(norm))
     tensor.weights = tensor.weights[order]
@@ -87,6 +89,7 @@ def sort_factors(tFac):
 
     if hasattr(tFac, 'mFactor'):
         tensor.mFactor = tensor.mFactor[:, order]
+        tensor.mWeights = tensor.mWeights[order]
         np.testing.assert_allclose(buildMat(tFac), buildMat(tensor), atol=1e-9)
 
     return tensor
@@ -106,6 +109,7 @@ def delete_component(tFac, compNum):
 
     if hasattr(tFac, 'mFactor'):
         tensor.mFactor = np.delete(tensor.mFactor, compNum, axis=1)
+        tensor.mWeights = np.delete(tensor.mWeights, compNum)
 
     tensor.factors = [np.delete(fac, compNum, axis=1) for fac in tensor.factors]
     return tensor
@@ -247,16 +251,16 @@ def perform_CP(tOrig, r=6, tol=1e-6):
     return tFac
 
 
-def perform_CMTF(tOrig, mOrig=None, r=9, tol=1e-6, maxiter=50):
+def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50):
     """ Perform CMTF decomposition. """
     assert tOrig.dtype == float
-    if mOrig is not None:
-        assert mOrig.dtype == float
+    assert mOrig.dtype == float
     tFac = initialize_cmtf(tOrig, mOrig, r)
 
     # Pre-unfold
     unfolded = np.hstack((tl.unfold(tOrig, 0), mOrig))
     missingM = np.all(np.isfinite(mOrig), axis=1)
+    assert np.sum(missingM) >= 1, "mOrig must contain at least one complete row"
     R2X = -np.inf
 
     # Precalculate the missingness patterns
@@ -281,6 +285,7 @@ def perform_CMTF(tOrig, mOrig=None, r=9, tol=1e-6, maxiter=50):
         if R2X - R2X_last < tol:
             break
 
+    assert not np.all(tFac.mFactor == 0.0)
     tFac = cp_normalize(tFac)
     tFac = reorient_factors(tFac)
     tFac = sort_factors(tFac)
