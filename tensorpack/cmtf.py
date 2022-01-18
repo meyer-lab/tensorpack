@@ -251,7 +251,7 @@ def perform_CP(tOrig, r=6, tol=1e-6):
     return tFac
 
 
-def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50):
+def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, qr=False):
     """ Perform CMTF decomposition. """
     assert tOrig.dtype == float
     assert mOrig.dtype == float
@@ -277,6 +277,9 @@ def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50):
         kr = khatri_rao(tFac.factors, skip_matrix=0)
         kr = np.vstack((kr, tFac.mFactor))
         tFac.factors[0] = censored_lstsq(kr, unfolded.T, uniqueInfo)
+
+        if qr:
+            tFac.factors[0] = np.linalg.qr(tFac.factors[0])[0]
 
         R2X_last = R2X
         R2X = calcR2X(tFac, tOrig, mOrig)
