@@ -67,12 +67,12 @@ class Decomposition():
                 i, j, k = idxs[np.random.choice(idxs.shape[0], 1)][0]
                 missingCube[:, j, k] = np.nan
             
-            tOrig = np.copy(self.data)
-            tOrig[np.isfinite(missingCube)] = np.nan
+            tImp = np.copy(self.data)
+            tImp[np.isfinite(missingCube)] = np.nan
 
             for rr in enumerate(self.rrs):
                 tFac = self.method(missingCube, rr)
-                Q2X[x,rr] = calcR2X(tFac, tIn=tOrig)
+                Q2X[x,rr] = calcR2X(tFac, tIn=tImp)
                 
         self.chordQ2X = Q2X
 
@@ -100,23 +100,23 @@ class Decomposition():
                         removable = True
                     attempt += 1     
 
-            tOrig = np.copy(self.data)
-            tOrig[np.isfinite(missingCube)] = np.nan
+            tImp = np.copy(self.data)
+            tImp[np.isfinite(missingCube)] = np.nan
 
             for rr in enumerate(self.rrs):
                 tFac = self.method(missingCube, rr)
-                Q2X[x,rr] = calcR2X(tFac, tIn=tOrig)
+                Q2X[x,rr] = calcR2X(tFac, tIn=tImp)
 
             if comparePCA:
                 missingMat = flatten_to_mat(missingCube)
-                mOrig = flatten_to_mat(self.data)
-                mOrig[np.isfinite(missingMat)] = np.nan
+                mImp = flatten_to_mat(self.data)
+                mImp[np.isfinite(missingCube)] = np.nan
 
                 tsvd = TruncatedSVD(n_components=max(self.rrs))
                 scores = tsvd.fit_transform(missingMat)
                 loadings = tsvd.components_
                 recon = [scores[:, :rr] @ loadings[:rr, :] for rr in self.rrs]
-                Q2XPCA[x,rr] = [calcR2X(c, mIn = mOrig) for c in recon]
+                Q2XPCA[x,rr] = [calcR2X(c, mIn = mImp) for c in recon]
     
             self.entryQ2X = Q2X
             self.entryQ2XPCA = Q2XPCA      
