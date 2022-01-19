@@ -1,17 +1,16 @@
 import pickle
-from typing import Counter
 import numpy as np
 import pandas as pd
 from numpy.linalg import norm
 from sklearn.decomposition import TruncatedSVD
 from .cmtf import perform_CP, calcR2X
 
-def flatten_to_mat(tensor, flattenon=0):
-    dataShape = tensor.shape
-    flatData = np.reshape(np.moveaxis(tensor, flattenon, 0), (dataShape[flattenon], -1))
-    if not np.all(np.isfinite(flatData)):
-        flatData = impute_missing_mat(flatData)
-    return flatData
+def flatten_to_mat(tensor):
+    n = tensor.shape[0]
+    tflat = np.reshape(tensor, (n, -1))
+    if not np.all(np.isfinite(tflat)):
+        tflat = impute_missing_mat(tflat)
+    return tflat
 
 def impute_missing_mat(dat):
     miss_idx = np.where(~np.isfinite(dat))
@@ -86,13 +85,13 @@ class Decomposition():
                 # drops entries
                 removable = False
                 attempt = 0
-                while not removable: # checks if dropped values will create empty chords before removing
+                while not removable:
+                    # checks if dropped values will create empty chords before removing
                     if attempt == 20:
                         break
-                        # maximum 20 attempts, if breaking then self.data may be too sparse
+                        # maximum 20 attempts; tensor may be too sparse
                     idxs = np.argwhere(np.isfinite(missingCube))
                     i, j, k = idxs[np.random.choice(idxs.shape[0], 1)][0]
-                    # checks chord on each axis for emptiness
                     missingChordI = sum(np.isfinite(missingCube[:,j,k])) > 1
                     missingChordJ = sum(np.isfinite(missingCube[i,:,k])) > 1
                     missingChordK = sum(np.isfinite(missingCube[i,j,:])) > 1
@@ -120,13 +119,7 @@ class Decomposition():
                 Q2XPCA[x,rr] = [calcR2X(c, mIn = mOrig) for c in recon]
     
             self.entryQ2X = Q2X
-            self.entryQ2XPCA = Q2XPCA
-
-
-            
-    
-                
-        
+            self.entryQ2XPCA = Q2XPCA      
 
     def save(self, pfile):
         with open(pfile, "wb") as output_file:
