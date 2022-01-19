@@ -8,7 +8,7 @@ import tensorly as tl
 from tensorly.tenalg import khatri_rao
 from copy import deepcopy
 from tensorly.decomposition._cp import initialize_cp, parafac
-from .soft_impute import SoftImpute
+from .SVD_impute import IterativeSVD
 
 
 tl.set_backend('numpy')
@@ -173,7 +173,7 @@ def initialize_cmtf(tensor: np.ndarray, matrix: np.ndarray, rank: int):
     unfold = np.hstack((unfold, matrix))
 
     if np.sum(~np.isfinite(unfold)) > 0:
-        si = SoftImpute(max_rank=rank)
+        si = IterativeSVD(rank=rank, random_state=1)
         unfold = si.fit_transform(unfold)
 
     factors[0] = np.linalg.svd(unfold)[0][:, :rank]
