@@ -26,7 +26,7 @@ def masked_mae(X_true, X_pred, mask):
 class IterativeSVD(Solver):
     def __init__(
             self,
-            rank=10,
+            rank,
             convergence_threshold=0.00001,
             max_iters=200,
             svd_algorithm="arpack",
