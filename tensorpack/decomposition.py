@@ -1,16 +1,17 @@
 import pickle
+from typing import Counter
 import numpy as np
 import pandas as pd
-<<<<<<< HEAD
 from numpy.linalg import norm
-=======
-from pandas._libs import missing
-from pandas.core.frame import DataFrame
-from statsmodels.multivariate.pca import PCA
->>>>>>> 14da78e99ae82ac1f4f09baaed847f2dd9228e5e
 from sklearn.decomposition import TruncatedSVD
-from tensorpack.cmtf import perform_CP, calcR2X
+from .cmtf import perform_CP, calcR2X
 
+def flatten_to_mat(tensor, flattenon=0):
+    dataShape = tensor.shape
+    flatData = np.reshape(np.moveaxis(tensor, flattenon, 0), (dataShape[flattenon], -1))
+    if not np.all(np.isfinite(flatData)):
+        flatData = impute_missing_mat(flatData)
+    return flatData
 
 def impute_missing_mat(dat):
     miss_idx = np.where(~np.isfinite(dat))
@@ -35,7 +36,6 @@ def impute_missing_mat(dat):
         imp[miss_idx] = recon[miss_idx]
     return imp
 
-
 class Decomposition():
     def __init__(self, data, max_rr=6):
         self.data = data
@@ -45,15 +45,11 @@ class Decomposition():
 
     def perform_tfac(self):
         self.tfac = [self.method(self.data, r=rr) for rr in self.rrs]
-        self.TR2X = [c.R2X for c in self.tfac]
-        self.sizeT = [rr * sum(self.tfac[0].shape) for rr in self.rrs]
+        self.tR2X = [c.R2X for c in self.tfac]
+        self.tsize = [rr * sum(self.tfac[0].shape) for rr in self.rrs]
 
-    def perform_PCA(self, flattenon=0):
-        dataShape = self.data.shape
-        flatData = np.reshape(np.moveaxis(self.data, flattenon, 0), (dataShape[flattenon], -1))
-        if not np.all(np.isfinite(flatData)):
-            flatData = impute_missing_mat(flatData)
-
+    def perform_PCA(self):
+        flatData = flatten_to_mat(self.data)
         tsvd = TruncatedSVD(n_components=max(self.rrs))
         scores = tsvd.fit_transform(flatData)
         loadings = tsvd.components_
@@ -62,29 +58,75 @@ class Decomposition():
         self.sizePCA = [sum(flatData.shape) * rr for rr in self.rrs]
 
 
-    def Q2X_chord(self, drop=2, repeat=2):
-        Q2X = np.zeros((repeat,self.rrs[-1]))
+    def Q2X_chord(self, drop=10, repeat=10):
+        Q2X = np.zeros(repeat,self.rrs[-1])
         for x in range(repeat):
             missingCube = np.copy(self.data)
             for _ in range(drop):
+                # drops chords
                 idxs = np.argwhere(np.isfinite(missingCube))
                 i, j, k = idxs[np.random.choice(idxs.shape[0], 1)][0]
                 missingCube[:, j, k] = np.nan
-            tenFacs = [self.method(missingCube, r=rr) for rr in self.rrs]
-            tImps = [c.to_tensor() for c in tenFacs]
-            tIn = np.copy(self.data)
-            tIn[np.isfinite(missingCube)] = np.nan
-            tMask = np.isfinite(tIn)
-            for c,tImp in enumerate(tImps):
-                Top = np.sum(np.square(tImp * tMask - np.nan_to_num(tIn)))
-                Bottom = np.sum(np.square(np.nan_to_num(tIn)))
-                Q2X[x,c] = 1 - Top/Bottom
-                
-        self.chordQ2X = Q2X # df
+            
+            tOrig = np.copy(self.data)
+            tOrig[np.isfinite(missingCube)] = np.nan
 
-    def Q2X_entry(self, drop=10, repeat=10):
-        self.entryQ2X = None  # df
-        pass
+            for rr in enumerate(self.rrs):
+                tFac = self.method(missingCube, rr)
+                Q2X[x,rr] = calcR2X(tFac, tIn=tOrig)
+                
+        self.chordQ2X = Q2X
+
+    def Q2X_entry(self, drop=10, repeat=10, comparePCA=True, flattenon=0):
+        Q2X = np.zeros((repeat,self.rrs[-1]))
+        Q2XPCA = np.zeros((repeat,self.rrs[-1]))
+        for x in range(repeat):
+            missingCube = np.copy(self.data)
+            for _ in range(drop):
+                # drops entries
+                removable = False
+                attempt = 0
+                while not removable: # checks if dropped values will create empty chords before removing
+                    if attempt == 20:
+                        break
+                        # maximum 20 attempts, if breaking then self.data may be too sparse
+                    idxs = np.argwhere(np.isfinite(missingCube))
+                    i, j, k = idxs[np.random.choice(idxs.shape[0], 1)][0]
+                    # checks chord on each axis for emptiness
+                    missingChordI = sum(np.isfinite(missingCube[:,j,k])) > 1
+                    missingChordJ = sum(np.isfinite(missingCube[i,:,k])) > 1
+                    missingChordK = sum(np.isfinite(missingCube[i,j,:])) > 1
+                    if missingChordI and missingChordJ and missingChordK:
+                        missingCube[i, j, k] = np.nan
+                        removable = True
+                    attempt += 1     
+
+            tOrig = np.copy(self.data)
+            tOrig[np.isfinite(missingCube)] = np.nan
+
+            for rr in enumerate(self.rrs):
+                tFac = self.method(missingCube, rr)
+                Q2X[x,rr] = calcR2X(tFac, tIn=tOrig)
+
+            if comparePCA:
+                missingMat = flatten_to_mat(missingCube)
+                mOrig = flatten_to_mat(self.data)
+                mOrig[np.isfinite(missingMat)] = np.nan
+
+                tsvd = TruncatedSVD(n_components=max(self.rrs))
+                scores = tsvd.fit_transform(missingMat)
+                loadings = tsvd.components_
+                recon = [scores[:, :rr] @ loadings[:rr, :] for rr in self.rrs]
+                Q2XPCA[x,rr] = [calcR2X(c, mIn = mOrig) for c in recon]
+    
+            self.entryQ2X = Q2X
+            self.entryQ2XPCA = Q2XPCA
+
+
+            
+    
+                
+        
 
     def save(self, pfile):
         with open(pfile, "wb") as output_file:
