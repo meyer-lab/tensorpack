@@ -34,7 +34,7 @@ class IterativeSVD(Solver):
             random_state=None,
             min_value=None,
             max_value=None,
-            verbose=True):
+            verbose=False):
         Solver.__init__(
             self,
             fill_method=init_fill_method,
