@@ -1,3 +1,4 @@
+from os import remove
 import pickle
 import numpy as np
 import pandas as pd
@@ -34,6 +35,10 @@ def impute_missing_mat(dat):
         diff = new_diff
         imp[miss_idx] = recon[miss_idx]
     return imp
+
+def reshape(tensor):
+    tensor.shapes()
+
 
 class Decomposition():
     def __init__(self, data, max_rr=6):
@@ -77,19 +82,22 @@ class Decomposition():
         self.chordQ2X = Q2X
 
     def Q2X_entry(self, drop=10, repeat=10, comparePCA=True, flattenon=0):
+        """
+        Stores Q2X:     a ndarray of Q2X values of size repeat x components
+        Stores Q2XPCA:  an identical ndarray of Q2X values using PCA
+        """
         Q2X = np.zeros((repeat,self.rrs[-1]))
         Q2XPCA = np.zeros((repeat,self.rrs[-1]))
         for x in range(repeat):
             missingCube = np.copy(self.data)
+            tImp = np.copy(self.data)
+
+            """
+            # Option 1: checks if dropped values will create empty chords before removing
             for _ in range(drop):
                 # drops entries
                 removable = False
-                attempt = 0
                 while not removable:
-                    # checks if dropped values will create empty chords before removing
-                    if attempt == 20:
-                        break
-                        # maximum 20 attempts; tensor may be too sparse
                     idxs = np.argwhere(np.isfinite(missingCube))
                     i, j, k = idxs[np.random.choice(idxs.shape[0], 1)][0]
                     missingChordI = sum(np.isfinite(missingCube[:,j,k])) > 1
@@ -97,10 +105,43 @@ class Decomposition():
                     missingChordK = sum(np.isfinite(missingCube[i,j,:])) > 1
                     if missingChordI and missingChordJ and missingChordK:
                         missingCube[i, j, k] = np.nan
-                        removable = True
-                    attempt += 1     
+                        removable = True 
+            """
 
-            tImp = np.copy(self.data)
+            # Option 2: find values that must be kept and remove from the remaining data
+            # e.g. randomly select 2 values in each column to put in new tensor
+            #      check for other axis, if any have less than 2 then add them too
+            #      count all the kept values and show the minimum that must be kept
+            #      remove data up to required amount if possible
+            #      tensor = np.random.randint(0,9,(3,4,5))
+            chooseCube = np.isfinite(tImp)                  # tensor of 0/1 showing present or missing values
+            keepCube = np.zeros_like(tImp)                  # to be filled with positions of emin values
+            idxs = np.argwhere(chooseCube)                  # positions of all in original data
+            selectidxs = idxs
+
+            midxs = np.zeros((tImp.ndim,max(tImp.shape)))   # array representing every chord
+            for i in range(tImp.ndim):
+                midxs[i] = [1 for n in range(tImp.shape[i])] + [0 for m in range(len(midxs[i])-tImp.shape[i])]
+            
+            while midxs.sum > 0:
+                ranidx = np.random.choice(idxs.shape[0], 1)
+                i,j,k = idxs[ranidx][0]
+                if midxs[0,i] > 0 or midxs[1,j] > 0 or midxs[2,k] > 0:
+                    keepCube[i,j,k] = tImp[i,j,k]
+                    midxs[0,i] = 0
+                    midxs[1,j] = 0
+                    midxs[2,k] = 0
+                    selectidxs = np.delete(selectidxs,ranidx)
+            assert selectidxs.shape[0] >= drop
+            
+            keepMask = np.isfinite(keepCube)
+            missingCube[keepMask] = np.nan     # take out keepCube values
+            for _ in range(drop):                           # randomly remove other possible values
+                i, j, k = selectidxs[np.random.choice(selectidxs.shape[0], 1)][0]
+                missingCube[i,j,k] = np.nan
+            
+            missingCube[keepMask] = keepCube[keepMask]     # add back keepCube values
+
             tImp[np.isfinite(missingCube)] = np.nan
 
             for rr in enumerate(self.rrs):
@@ -118,8 +159,8 @@ class Decomposition():
                 recon = [scores[:, :rr] @ loadings[:rr, :] for rr in self.rrs]
                 Q2XPCA[x,rr] = [calcR2X(c, mIn = mImp) for c in recon]
     
-            self.entryQ2X = Q2X
-            self.entryQ2XPCA = Q2XPCA      
+        self.entryQ2X = Q2X
+        self.entryQ2XPCA = Q2XPCA      
 
     def save(self, pfile):
         with open(pfile, "wb") as output_file:
