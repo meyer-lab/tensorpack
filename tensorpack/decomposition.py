@@ -107,48 +107,50 @@ class Decomposition():
                         missingCube[i, j, k] = np.nan
                         removable = True 
             """
+            """
+            Option 2: find values that must be kept and remove from the remaining data
+            1)  randomly find an minimum tensor to run PCA
+            2)  prevent emin values from being removed in missingCube
+            3)  remove # of values in missingCube
+            4)  add emin values back in missingCube
 
-            # Option 2: find values that must be kept and remove from the remaining data
-            # e.g. randomly select 2 values in each column to put in new tensor
-            #      check for other axis, if any have less than 2 then add them too
-            #      count all the kept values and show the minimum that must be kept
-            #      remove data up to required amount if possible
-            #      tensor = np.random.randint(0,9,(3,4,5))
-            chooseCube = np.isfinite(tImp)                  # tensor of 0/1 showing present or missing values
-            keepCube = np.zeros_like(tImp)                  # to be filled with positions of emin values
-            idxs = np.argwhere(chooseCube)                  # positions of all in original data
+import numpy as np
+from tensorpack.decomposition import *
+tImp = np.random.randint(0,9,(3,4,5))
+test = Decomposition(tImp)
+test.Q2X_entry()
+
+            """
+
+            chooseCube = np.isfinite(tImp)                              # tensor of 0/1 showing present or missing values
+            idxs = np.argwhere(chooseCube)                              # positions of finite values in original data
             selectidxs = idxs
 
-            midxs = np.zeros((tImp.ndim,max(tImp.shape)))   # array representing every chord
+            midxs = np.zeros((tImp.ndim,max(tImp.shape)))               # array representing every chord
             for i in range(tImp.ndim):
                 midxs[i] = [1 for n in range(tImp.shape[i])] + [0 for m in range(len(midxs[i])-tImp.shape[i])]
             
-            while midxs.sum > 0:
-                ranidx = np.random.choice(idxs.shape[0], 1)
+            
+            while np.sum(midxs) > 0:                                        # number of columns with no values inside
+                ranidx = np.random.choice(idxs.shape[0], 1) 
                 i,j,k = idxs[ranidx][0]
                 if midxs[0,i] > 0 or midxs[1,j] > 0 or midxs[2,k] > 0:
-                    keepCube[i,j,k] = tImp[i,j,k]
                     midxs[0,i] = 0
                     midxs[1,j] = 0
                     midxs[2,k] = 0
-                    selectidxs = np.delete(selectidxs,ranidx)
-            assert selectidxs.shape[0] >= drop
-            
-            keepMask = np.isfinite(keepCube)
-            missingCube[keepMask] = np.nan     # take out keepCube values
-            for _ in range(drop):                           # randomly remove other possible values
+                    selectidxs = np.delete(selectidxs, ranidx, 0)           # holds positions in idxs excluding emin
+                assert selectidxs.shape[0] >= drop                          # possible to remove drop request values?
+
+            for _ in range(drop):
                 i, j, k = selectidxs[np.random.choice(selectidxs.shape[0], 1)][0]
                 missingCube[i,j,k] = np.nan
-            
-            missingCube[keepMask] = keepCube[keepMask]     # add back keepCube values
 
-            tImp[np.isfinite(missingCube)] = np.nan
-
+            tImp[np.isfinite(missingCube)] = np.nan                         # run Q2X for tensor method
             for rr in enumerate(self.rrs):
                 tFac = self.method(missingCube, rr)
                 Q2X[x,rr] = calcR2X(tFac, tIn=tImp)
 
-            if comparePCA:
+            if comparePCA:                                                  # run Q2X for PCA
                 missingMat = flatten_to_mat(missingCube)
                 mImp = flatten_to_mat(self.data)
                 mImp[np.isfinite(missingCube)] = np.nan
