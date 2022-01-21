@@ -66,7 +66,6 @@ class IterativeSVD(Solver):
         for i in range(self.max_iters):
             curr_rank = self.rank
             U, S, V = partial_svd(X_filled, curr_rank, random_state=self.random_state)
-            X_reduced = U
             X_reconstructed = U @ np.diag(S) @ V
             X_reconstructed = self.clip(X_reconstructed)
             mae = masked_mae(
