@@ -1,10 +1,7 @@
 from os.path import join, dirname
 import numpy as np
 import pandas as pd
-from ..cmtf import perform_CP
-from ..figureCommon import subplotLabel, getSetup
 from ..plot import *
-from ..decomposition import Decomposition
 
 path_here = dirname(dirname(__file__))
 
@@ -58,12 +55,3 @@ def createCube():
     assert ~np.any(np.all(np.isnan(cube), axis=(1, 2)))
 
     return cube 
-
-def sample_figure():
-    ax, f = getSetup((8, 5), (2, 3))
-    atyeo = Decomposition(createCube())
-    atyeo.perform_tfac()
-    atyeo.perform_PCA()
-    tfacr2x(ax[0], atyeo)
-    reduction(ax[1], atyeo)
-    return f

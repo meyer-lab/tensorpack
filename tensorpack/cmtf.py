@@ -3,7 +3,7 @@ Coupled Matrix Tensor Factorization
 """
 
 import numpy as np
-from sklearn.decomposition import TruncatedSVD
+from tensorly import partial_svd
 import tensorly as tl
 from tensorly.tenalg import khatri_rao
 from copy import deepcopy
@@ -200,8 +200,6 @@ def initialize_cp(tensor: np.ndarray, rank: int):
     factors = [np.ones((tensor.shape[i], rank)) for i in range(tensor.ndim)]
     contain_missing = (np.sum(~np.isfinite(tensor)) > 0)
 
-    tsvd = TruncatedSVD(n_components=rank)
-
     # SVD init mode whose size is larger than rank
     for mode in range(tensor.ndim):
         if tensor.shape[mode] >= rank:
@@ -210,7 +208,7 @@ def initialize_cp(tensor: np.ndarray, rank: int):
                 si = SoftImpute(max_rank=rank)
                 unfold = si.fit_transform(unfold)
 
-            factors[mode] = tsvd.fit_transform(unfold)
+            factors[mode] = partial_svd(unfold, rank, flip=True)[0]
 
     return tl.cp_tensor.CPTensor((None, factors))
 

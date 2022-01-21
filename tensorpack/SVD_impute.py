@@ -10,8 +10,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from sklearn.decomposition import TruncatedSVD
-from sklearn.utils import check_array
+from tensorly import partial_svd
 import numpy as np
 
 from .soft_impute import Solver
@@ -29,7 +28,6 @@ class IterativeSVD(Solver):
             rank,
             convergence_threshold=0.00001,
             max_iters=200,
-            svd_algorithm="arpack",
             init_fill_method="zero",
             random_state=None,
             min_value=None,
@@ -42,7 +40,6 @@ class IterativeSVD(Solver):
             max_value=max_value)
         self.rank = rank
         self.max_iters = max_iters
-        self.svd_algorithm = svd_algorithm
         self.convergence_threshold = convergence_threshold
         self.verbose = verbose
         self.random_state = random_state
@@ -62,15 +59,14 @@ class IterativeSVD(Solver):
             return (ssd / old_norm_squared) < self.convergence_threshold
 
     def solve(self, X, missing_mask):
-        X = check_array(X, force_all_finite=False)
+        # X = check_array(X, force_all_finite=False)
 
         observed_mask = ~missing_mask
         X_filled = X
         for i in range(self.max_iters):
             curr_rank = self.rank
-            tsvd = TruncatedSVD(curr_rank, algorithm=self.svd_algorithm, random_state=self.random_state)
-            X_reduced = tsvd.fit_transform(X_filled)
-            X_reconstructed = tsvd.inverse_transform(X_reduced)
+            U, S, V = partial_svd(X_filled, curr_rank, random_state=self.random_state)
+            X_reconstructed = U @ np.diag(S) @ V
             X_reconstructed = self.clip(X_reconstructed)
             mae = masked_mae(
                 X_true=X,

@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 import pandas as pd
 from numpy.linalg import norm
-from sklearn.decomposition import TruncatedSVD
+from tensorly import partial_svd
 from .cmtf import perform_CP, calcR2X
 
 
@@ -19,9 +19,9 @@ def impute_missing_mat(dat):
 
     diff = 1.0
     while diff > 1e-3:
-        tsvd = TruncatedSVD(n_components=min(dat.shape)-1)
-        scores = tsvd.fit_transform(imp)
-        loadings = tsvd.components_
+        U, S, V = partial_svd(imp, min(dat.shape)-1)
+        scores = U @ np.diag(S)
+        loadings = V
         recon = scores @ loadings
         new_diff = norm(imp[miss_idx] - recon[miss_idx]) / norm(recon[miss_idx])
         assert new_diff < diff, "Matrix imputation difference is not decreasing"
@@ -48,9 +48,9 @@ class Decomposition():
         if not np.all(np.isfinite(flatData)):
             flatData = impute_missing_mat(flatData)
 
-        tsvd = TruncatedSVD(n_components=max(self.rrs))
-        scores = tsvd.fit_transform(flatData)
-        loadings = tsvd.components_
+        U, S, V = partial_svd(flatData, max(self.rrs))
+        scores = U @ np.diag(S)
+        loadings = V
         recon = [scores[:, :rr] @ loadings[:rr, :] for rr in self.rrs]
         self.PCAR2X = [calcR2X(c, mIn = flatData) for c in recon]
         self.sizePCA = [sum(flatData.shape) * rr for rr in self.rrs]
