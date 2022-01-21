@@ -11,8 +11,7 @@
 # limitations under the License.
 
 import numpy as np
-from sklearn.utils.extmath import randomized_svd
-from sklearn.utils import check_array
+from tensorly import partial_svd
 
 F32PREC = np.finfo(np.float32).eps
 
@@ -73,7 +72,7 @@ class Solver(object):
         inplace : bool
             Modify matrix or fill a copy
         """
-        X = check_array(X, force_all_finite=False)
+        # X = check_array(X, force_all_finite=False)
 
         if not inplace:
             X = X.copy()
@@ -99,7 +98,7 @@ class Solver(object):
         Check to make sure that the input matrix and its mask of missing
         values are valid. Returns X and missing mask.
         """
-        X = check_array(X, force_all_finite=False)
+        # X = check_array(X, force_all_finite=False)
         if X.dtype != "f" and X.dtype != "d":
             X = X.astype(float)
 
@@ -251,11 +250,7 @@ class SoftImpute(Solver):
         """
         if max_rank:
             # if we have a max rank then perform the faster randomized SVD
-            (U, s, V) = randomized_svd(
-                X,
-                max_rank,
-                n_iter=self.n_power_iterations,
-                random_state=None)
+            U, s, V = partial_svd(X, max_rank)
         else:
             # perform a full rank SVD using ARPACK
             (U, s, V) = np.linalg.svd(
@@ -273,15 +268,11 @@ class SoftImpute(Solver):
 
     def _max_singular_value(self, X_filled):
         # quick decomposition of X_filled into rank-1 SVD
-        _, s, _ = randomized_svd(
-            X_filled,
-            1,
-            n_iter=5,
-            random_state=None)
+        _, s, _ = partial_svd(X_filled, 1)
         return s[0]
 
     def solve(self, X, missing_mask):
-        X = check_array(X, force_all_finite=False)
+        # X = check_array(X, force_all_finite=False)
 
         X_init = X.copy()
 
