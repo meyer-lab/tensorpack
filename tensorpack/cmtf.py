@@ -8,8 +8,8 @@ import tensorly as tl
 from tensorly.tenalg import khatri_rao
 from copy import deepcopy
 from tensorly.decomposition._cp import initialize_cp, parafac
+from tqdm import tqdm
 from .SVD_impute import IterativeSVD
-from .soft_impute import SoftImpute
 
 
 tl.set_backend('numpy')
@@ -176,8 +176,9 @@ def initialize_cmtf(tensor: np.ndarray, matrix: np.ndarray, rank: int):
     if np.sum(~np.isfinite(unfold)) > 0:
         si = IterativeSVD(rank=rank, random_state=1)
         unfold = si.fit_transform(unfold)
-
-    factors[0] = np.linalg.svd(unfold)[0][:, :rank]
+        factors[0] = si.U
+    else:
+        factors[0] = np.linalg.svd(unfold)[0][:, :rank]
 
     unfold = tl.unfold(tensor, 1)
     unfold = unfold[:, np.all(np.isfinite(unfold), axis=0)]
@@ -205,7 +206,7 @@ def initialize_cp(tensor: np.ndarray, rank: int):
         if tensor.shape[mode] >= rank:
             unfold = tl.unfold(tensor, mode)
             if contain_missing:
-                si = SoftImpute(max_rank=rank)
+                si = IterativeSVD(rank)
                 unfold = si.fit_transform(unfold)
 
             factors[mode] = partial_svd(unfold, rank, flip=True)[0]
@@ -250,7 +251,7 @@ def perform_CP(tOrig, r=6, tol=1e-6):
     return tFac
 
 
-def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, qr=False):
+def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, progress=True):
     """ Perform CMTF decomposition. """
     assert tOrig.dtype == float
     assert mOrig.dtype == float
@@ -265,9 +266,10 @@ def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, qr=False):
     # Precalculate the missingness patterns
     uniqueInfo = np.unique(np.isfinite(unfolded.T), axis=1, return_inverse=True)
 
-    for _ in range(maxiter):
+    tq = tqdm(range(maxiter), disable=(not progress))
+    for _ in tq:
         tensor = np.nan_to_num(tOrig) + tl.cp_to_tensor(tFac) * np.isnan(tOrig)
-        tFac = parafac(tensor, r, 200, init=tFac, verbose=False, fixed_modes=[0], mask=np.isfinite(tOrig), linesearch=True, tol=1e-9)
+        tFac = parafac(tensor, r, 2000, init=tFac, verbose=False, fixed_modes=[0], mask=np.isfinite(tOrig), linesearch=True, tol=1e-9)
 
         # Solve for the glycan matrix fit
         tFac.mFactor = np.linalg.lstsq(tFac.factors[0][missingM, :], mOrig[missingM, :], rcond=-1)[0].T
@@ -277,11 +279,9 @@ def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, qr=False):
         kr = np.vstack((kr, tFac.mFactor))
         tFac.factors[0] = censored_lstsq(kr, unfolded.T, uniqueInfo)
 
-        if qr:
-            tFac.factors[0] = np.linalg.qr(tFac.factors[0])[0]
-
         R2X_last = R2X
         R2X = calcR2X(tFac, tOrig, mOrig)
+        tq.set_postfix(R2X=R2X, delta=R2X - R2X_last, refresh=False)
         assert R2X > 0.0
 
         if R2X - R2X_last < tol:
@@ -292,7 +292,5 @@ def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, qr=False):
     tFac = reorient_factors(tFac)
     tFac = sort_factors(tFac)
     tFac.R2X = R2X
-
-    print("R2X: " + str(tFac.R2X))
 
     return tFac
