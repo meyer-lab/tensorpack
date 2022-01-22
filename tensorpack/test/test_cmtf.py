@@ -8,7 +8,8 @@ from tensorly.cp_tensor import _validate_cp_tensor
 from tensorly.random import random_cp
 from ..cmtf import perform_CMTF, delete_component, calcR2X, buildMat, sort_factors, perform_CP
 
-def createCube(missing = 0.0, size = (10, 20, 25)):
+
+def createCube(missing=0.0, size=(10, 20, 25)):
     s = np.random.gamma(2, 2, np.prod(size))
     tensor = s.reshape(*size)
     if missing > 0.0:
@@ -39,7 +40,7 @@ def test_cmtf_R2X():
 
 def test_cp():
     # Test that the CP decomposition code works.
-    tensor = createCube(missing = 0.2, size=(10, 20, 25))
+    tensor = createCube(missing=0.2, size=(10, 20, 25))
     fac3 = perform_CP(tensor, r=3)
     fac6 = perform_CP(tensor, r=6)
     assert fac3.R2X < fac6.R2X
@@ -47,7 +48,7 @@ def test_cp():
     if fac3.R2X < 0.67:
         warnings.warn("CP (r=3) with 20% missingness, R2X < 0.67 (expected)" + str(fac3.R2X))
 
-    ## test case where mode size < rank
+    # test case where mode size < rank
     tensor2 = createCube(missing=0.2, size=(10, 4, 50))
     fac23 = perform_CP(tensor2, r=3)
     fac26 = perform_CP(tensor2, r=6)

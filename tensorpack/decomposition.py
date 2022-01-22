@@ -1,6 +1,5 @@
 import pickle
 import numpy as np
-import pandas as pd
 from numpy.linalg import norm
 from tensorly import partial_svd
 from .cmtf import perform_CP, calcR2X
@@ -19,7 +18,7 @@ def impute_missing_mat(dat):
 
     diff = 1.0
     while diff > 1e-3:
-        U, S, V = partial_svd(imp, min(dat.shape)-1)
+        U, S, V = partial_svd(imp, min(dat.shape) - 1)
         scores = U @ np.diag(S)
         loadings = V
         recon = scores @ loadings
@@ -52,12 +51,11 @@ class Decomposition():
         scores = U @ np.diag(S)
         loadings = V
         recon = [scores[:, :rr] @ loadings[:rr, :] for rr in self.rrs]
-        self.PCAR2X = [calcR2X(c, mIn = flatData) for c in recon]
+        self.PCAR2X = [calcR2X(c, mIn=flatData) for c in recon]
         self.sizePCA = [sum(flatData.shape) * rr for rr in self.rrs]
 
-
     def Q2X_chord(self, drop=10, repeat=10):
-        self.chordQ2X = None # df
+        self.chordQ2X = None  # df
         pass
 
     def Q2X_entry(self, drop=10, repeat=10):

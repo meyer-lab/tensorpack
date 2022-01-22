@@ -3,7 +3,6 @@ This file makes all standard plots for tensor analysis
 """
 
 import numpy as np
-import pandas as pd
 from matplotlib.ticker import ScalarFormatter
 from .decomposition import Decomposition
 
@@ -58,6 +57,7 @@ def q2xchord(ax, decomp):
 
     pass
 
+
 def q2xentry(ax, decomp):
     # figure 3b in MSB
     single_df = decomp.entryQ2X
@@ -80,6 +80,7 @@ def q2xentry(ax, decomp):
     ax.legend(loc=4)
 
     pass
+
 
 def plot_weights(decomp):
     # figure 5 in MSB
