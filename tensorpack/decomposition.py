@@ -1,5 +1,6 @@
 from os import remove
 import pickle
+from xml.etree.ElementTree import tostring
 import numpy as np
 import pandas as pd
 from numpy.linalg import norm
@@ -36,15 +37,12 @@ def impute_missing_mat(dat):
         imp[miss_idx] = recon[miss_idx]
     return imp
 
-def reshape(tensor):
-    tensor.shapes()
-
 
 class Decomposition():
     def __init__(self, data, max_rr=6):
         self.data = data
         self.method = perform_CP
-        self.rrs = np.arange(1, max_rr)
+        self.rrs = np.arange(max_rr)
         pass
 
     def perform_tfac(self):
@@ -77,17 +75,13 @@ class Decomposition():
 
             for rr in enumerate(self.rrs):
                 tFac = self.method(missingCube, rr)
-                Q2X[x,rr] = calcR2X(tFac, tIn=tImp)
+                Q2X[x,rr-1] = calcR2X(tFac, tIn=tImp)
                 
         self.chordQ2X = Q2X
 
     def Q2X_entry(self, drop=10, repeat=10, comparePCA=True, flattenon=0):
-        """
-        Stores Q2X:     a ndarray of Q2X values of size repeat x components
-        Stores Q2XPCA:  an identical ndarray of Q2X values using PCA
-        """
-        Q2X = np.zeros((repeat,self.rrs[-1]))
-        Q2XPCA = np.zeros((repeat,self.rrs[-1]))
+        Q2X = np.zeros((repeat,self.rrs[-1]+1))
+        Q2XPCA = np.zeros((repeat,self.rrs[-1]+1))
         for x in range(repeat):
             missingCube = np.copy(self.data)
             tImp = np.copy(self.data)
@@ -113,24 +107,17 @@ class Decomposition():
             2)  prevent emin values from being removed in missingCube
             3)  remove # of values in missingCube
             4)  add emin values back in missingCube
-
-import numpy as np
-from tensorpack.decomposition import *
-tImp = np.random.randint(0,9,(3,4,5))
-test = Decomposition(tImp)
-test.Q2X_entry()
-
             """
 
-            chooseCube = np.isfinite(tImp)                              # tensor of 0/1 showing present or missing values
-            idxs = np.argwhere(chooseCube)                              # positions of finite values in original data
-            selectidxs = idxs
+            chooseCube = np.isfinite(tImp)                                  # tensor of 0/1 showing present or missing values
+            idxs = np.argwhere(chooseCube)                                  # positions of finite values in original data
+            selectidxs = np.copy(idxs)
 
-            midxs = np.zeros((tImp.ndim,max(tImp.shape)))               # array representing every chord
+            midxs = np.zeros((tImp.ndim,max(tImp.shape)))                   # array representing every chord
             for i in range(tImp.ndim):
                 midxs[i] = [1 for n in range(tImp.shape[i])] + [0 for m in range(len(midxs[i])-tImp.shape[i])]
             
-            
+            counter = 0
             while np.sum(midxs) > 0:                                        # number of columns with no values inside
                 ranidx = np.random.choice(idxs.shape[0], 1) 
                 i,j,k = idxs[ranidx][0]
@@ -139,15 +126,22 @@ test.Q2X_entry()
                     midxs[1,j] = 0
                     midxs[2,k] = 0
                     selectidxs = np.delete(selectidxs, ranidx, 0)           # holds positions in idxs excluding emin
-                assert selectidxs.shape[0] >= drop                          # possible to remove drop request values?
-
+                    counter += 1
+                
+            print(str(counter) + " values removed")
+            print(str(selectidxs.shape[0]/idxs.shape[0]) + "percent of data remainins")
+            assert selectidxs.shape[0] >= drop                              # possible to remove drop request values?
+            
             for _ in range(drop):
                 i, j, k = selectidxs[np.random.choice(selectidxs.shape[0], 1)][0]
                 missingCube[i,j,k] = np.nan
 
+
+
+
             tImp[np.isfinite(missingCube)] = np.nan                         # run Q2X for tensor method
-            for rr in enumerate(self.rrs):
-                tFac = self.method(missingCube, rr)
+            for rr in self.rrs:
+                tFac = self.method(missingCube, r=rr+1)
                 Q2X[x,rr] = calcR2X(tFac, tIn=tImp)
 
             if comparePCA:                                                  # run Q2X for PCA
@@ -160,6 +154,8 @@ test.Q2X_entry()
                 loadings = tsvd.components_
                 recon = [scores[:, :rr] @ loadings[:rr, :] for rr in self.rrs]
                 Q2XPCA[x,rr] = [calcR2X(c, mIn = mImp) for c in recon]
+            
+            print("Finished repetition: " + str(x))
     
         self.entryQ2X = Q2X
         self.entryQ2XPCA = Q2XPCA      

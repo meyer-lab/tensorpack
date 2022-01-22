@@ -240,7 +240,6 @@ def perform_CP(tOrig, r=6, tol=1e-6):
 
     if r > 1:
         tFac = sort_factors(tFac)
-    print(tFac.R2X)
 
     return tFac
 
