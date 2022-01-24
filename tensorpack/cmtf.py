@@ -7,7 +7,7 @@ from tensorly import partial_svd
 import tensorly as tl
 from tensorly.tenalg import khatri_rao
 from copy import deepcopy
-from tensorly.decomposition._cp import initialize_cp, parafac
+from tensorly.decomposition._cp import initialize_cp
 from tqdm import tqdm
 from .SVD_impute import IterativeSVD
 
@@ -116,7 +116,7 @@ def delete_component(tFac, compNum):
     return tensor
 
 
-def censored_lstsq(A: np.ndarray, B: np.ndarray, uniqueInfo) -> np.ndarray:
+def censored_lstsq(A: np.ndarray, B: np.ndarray, uniqueInfo=None) -> np.ndarray:
     """Solves least squares problem subject to missing data.
     Note: uses a for loop over the missing patterns of B, leading to a
     slower but more numerically stable algorithm
@@ -130,7 +130,10 @@ def censored_lstsq(A: np.ndarray, B: np.ndarray, uniqueInfo) -> np.ndarray:
     """
     X = np.empty((A.shape[1], B.shape[1]))
     # Missingness patterns
-    unique, uIDX = uniqueInfo
+    if uniqueInfo is None:
+        unique, uIDX = np.unique(np.isfinite(B), axis=1, return_inverse=True)
+    else:
+        unique, uIDX = uniqueInfo
 
     for i in range(unique.shape[1]):
         uI = uIDX == i
@@ -268,8 +271,9 @@ def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, progress=True):
 
     tq = tqdm(range(maxiter), disable=(not progress))
     for _ in tq:
-        tensor = np.nan_to_num(tOrig) + tl.cp_to_tensor(tFac) * np.isnan(tOrig)
-        tFac = parafac(tensor, r, 2000, init=tFac, verbose=False, fixed_modes=[0], mask=np.isfinite(tOrig), linesearch=True, tol=1e-9)
+        for m in [1, 2]:
+            kr = khatri_rao(tFac.factors, skip_matrix=m)
+            tFac.factors[m] = censored_lstsq(kr, tl.unfold(tOrig, m).T)
 
         # Solve for the glycan matrix fit
         tFac.mFactor = np.linalg.lstsq(tFac.factors[0][missingM, :], mOrig[missingM, :], rcond=-1)[0].T
