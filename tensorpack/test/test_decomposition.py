@@ -8,11 +8,11 @@ import tensorly as tl
 from tensorly.random import random_cp
 from ..decomposition import Decomposition
 from ..cmtf import perform_CP, calcR2X
+from tensordata.atyeo import data as atyeo
 
 
 def test_decomp_obj():
-    cube = random_cp((20, 10, 8), 5, full=True)
-    a = Decomposition(cube)
+    a = Decomposition(atyeo().tensor)
     a.perform_tfac()
     a.perform_PCA()
     assert len(a.PCAR2X) == len(a.sizePCA)
