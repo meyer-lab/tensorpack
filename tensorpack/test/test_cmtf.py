@@ -7,8 +7,10 @@ import warnings
 from tensorly.cp_tensor import _validate_cp_tensor
 from tensorly.random import random_cp
 from ..cmtf import perform_CMTF, delete_component, calcR2X, buildMat, sort_factors, perform_CP
+from tensordata.alter import data as alter
 
-def createCube(missing = 0.0, size = (10, 20, 25)):
+
+def createCube(missing=0.0, size=(10, 20, 25)):
     s = np.random.gamma(2, 2, np.prod(size))
     tensor = s.reshape(*size)
     if missing > 0.0:
@@ -19,8 +21,8 @@ def createCube(missing = 0.0, size = (10, 20, 25)):
 def test_cmtf_R2X():
     """ Test to ensure R2X for higher components is larger. """
     arr = []
-    tensor = createCube(missing=0.2, size=(10, 20, 25))
-    matrix = createCube(missing=0.2, size=(10, 15))
+    d = alter()
+    tensor, matrix = d.tensor, d.matrix
     for i in range(1, 5):
         facT = perform_CMTF(tensor, matrix, r=i)
         assert np.all(np.isfinite(facT.factors[0]))
@@ -33,13 +35,13 @@ def test_cmtf_R2X():
     # confirm R2X is >= 0 and <=1
     assert np.min(arr) >= 0
     assert np.max(arr) <= 1
-    if arr[2] < 0.66:
-        warnings.warn("CMTF (r=3) with 20% missingness, R2X < 0.66 (expected)" + str(arr[2]))
+    if arr[2] < 0.87:
+        warnings.warn("CMTF (r=3) on Alter dataset, R2X = " + str(arr[2]) + " < 0.87 (expected)")
 
 
 def test_cp():
     # Test that the CP decomposition code works.
-    tensor = createCube(missing = 0.2, size=(10, 20, 25))
+    tensor = createCube(missing=0.2, size=(10, 20, 25))
     fac3 = perform_CP(tensor, r=3)
     fac6 = perform_CP(tensor, r=6)
     assert fac3.R2X < fac6.R2X
@@ -47,7 +49,7 @@ def test_cp():
     if fac3.R2X < 0.67:
         warnings.warn("CP (r=3) with 20% missingness, R2X < 0.67 (expected)" + str(fac3.R2X))
 
-    ## test case where mode size < rank
+    # test case where mode size < rank
     tensor2 = createCube(missing=0.2, size=(10, 4, 50))
     fac23 = perform_CP(tensor2, r=3)
     fac26 = perform_CP(tensor2, r=6)
@@ -58,7 +60,7 @@ def test_cp():
 def test_delete():
     """ Test deleting a component results in a valid tensor. """
     tOrig = createCube(missing=0.2, size=(10, 20, 25))
-    mOrig = createCube(missing=0.2, size=(10, 15))
+    mOrig = createCube(missing=0.05, size=(10, 15))
     facT = perform_CMTF(tOrig, mOrig, r=4)
 
     fullR2X = calcR2X(facT, tOrig, mOrig)
@@ -79,6 +81,7 @@ def test_sort():
 
     tFac = random_cp(tOrig.shape, 3)
     tFac.mFactor = np.random.randn(mOrig.shape[1], 3)
+    tFac.mWeights = np.ones(3)
 
     R2X = calcR2X(tFac, tOrig, mOrig)
     tRec = tl.cp_to_tensor(tFac)

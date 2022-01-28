@@ -3,12 +3,13 @@ Coupled Matrix Tensor Factorization
 """
 
 import numpy as np
-from sklearn.decomposition import TruncatedSVD
+from tensorly import partial_svd
 import tensorly as tl
 from tensorly.tenalg import khatri_rao
 from copy import deepcopy
-from tensorly.decomposition._cp import initialize_cp, parafac
-from .soft_impute import SoftImpute
+from tensorly.decomposition._cp import initialize_cp
+from tqdm import tqdm
+from .SVD_impute import IterativeSVD
 
 
 tl.set_backend('numpy')
@@ -16,6 +17,8 @@ tl.set_backend('numpy')
 
 def buildMat(tFac):
     """ Build the matrix in CMTF from the factors. """
+    if hasattr(tFac, 'mWeights'):
+        return tFac.factors[0] @ (tFac.mFactor * tFac.mWeights).T
     return tFac.factors[0] @ tFac.mFactor.T
 
 
@@ -78,7 +81,7 @@ def sort_factors(tFac):
 
     # Add the variance of the matrix
     if hasattr(tFac, 'mFactor'):
-        norm += np.sum(np.square(tFac.factors[0]), axis=0) * np.sum(np.square(tFac.mFactor), axis=0)
+        norm += np.sum(np.square(tFac.factors[0]), axis=0) * np.sum(np.square(tFac.mFactor), axis=0) * tFac.mWeights
 
     order = np.flip(np.argsort(norm))
     tensor.weights = tensor.weights[order]
@@ -87,6 +90,7 @@ def sort_factors(tFac):
 
     if hasattr(tFac, 'mFactor'):
         tensor.mFactor = tensor.mFactor[:, order]
+        tensor.mWeights = tensor.mWeights[order]
         np.testing.assert_allclose(buildMat(tFac), buildMat(tensor), atol=1e-9)
 
     return tensor
@@ -106,12 +110,13 @@ def delete_component(tFac, compNum):
 
     if hasattr(tFac, 'mFactor'):
         tensor.mFactor = np.delete(tensor.mFactor, compNum, axis=1)
+        tensor.mWeights = np.delete(tensor.mWeights, compNum)
 
     tensor.factors = [np.delete(fac, compNum, axis=1) for fac in tensor.factors]
     return tensor
 
 
-def censored_lstsq(A: np.ndarray, B: np.ndarray, uniqueInfo) -> np.ndarray:
+def censored_lstsq(A: np.ndarray, B: np.ndarray, uniqueInfo=None) -> np.ndarray:
     """Solves least squares problem subject to missing data.
     Note: uses a for loop over the missing patterns of B, leading to a
     slower but more numerically stable algorithm
@@ -125,7 +130,10 @@ def censored_lstsq(A: np.ndarray, B: np.ndarray, uniqueInfo) -> np.ndarray:
     """
     X = np.empty((A.shape[1], B.shape[1]))
     # Missingness patterns
-    unique, uIDX = uniqueInfo
+    if uniqueInfo is None:
+        unique, uIDX = np.unique(np.isfinite(B), axis=1, return_inverse=True)
+    else:
+        unique, uIDX = uniqueInfo
 
     for i in range(unique.shape[1]):
         uI = uIDX == i
@@ -142,7 +150,9 @@ def cp_normalize(tFac):
         scales = np.linalg.norm(factor, ord=np.inf, axis=0)
         tFac.weights *= scales
         if i == 0 and hasattr(tFac, 'mFactor'):
-            tFac.mFactor *= scales
+            mScales = np.linalg.norm(tFac.mFactor, ord=np.inf, axis=0)
+            tFac.mWeights = scales * mScales
+            tFac.mFactor /= mScales
 
         tFac.factors[i] /= scales
 
@@ -167,10 +177,11 @@ def initialize_cmtf(tensor: np.ndarray, matrix: np.ndarray, rank: int):
     unfold = np.hstack((unfold, matrix))
 
     if np.sum(~np.isfinite(unfold)) > 0:
-        si = SoftImpute(max_rank=rank)
+        si = IterativeSVD(rank=rank, random_state=1)
         unfold = si.fit_transform(unfold)
-
-    factors[0] = np.linalg.svd(unfold)[0][:, :rank]
+        factors[0] = si.U
+    else:
+        factors[0] = np.linalg.svd(unfold)[0][:, :rank]
 
     unfold = tl.unfold(tensor, 1)
     unfold = unfold[:, np.all(np.isfinite(unfold), axis=0)]
@@ -193,22 +204,20 @@ def initialize_cp(tensor: np.ndarray, rank: int):
     factors = [np.ones((tensor.shape[i], rank)) for i in range(tensor.ndim)]
     contain_missing = (np.sum(~np.isfinite(tensor)) > 0)
 
-    tsvd = TruncatedSVD(n_components=rank)
-
     # SVD init mode whose size is larger than rank
     for mode in range(tensor.ndim):
         if tensor.shape[mode] >= rank:
             unfold = tl.unfold(tensor, mode)
             if contain_missing:
-                si = SoftImpute(max_rank=rank)
+                si = IterativeSVD(rank)
                 unfold = si.fit_transform(unfold)
 
-            factors[mode] = tsvd.fit_transform(unfold)
+            factors[mode] = partial_svd(unfold, rank, flip=True)[0]
 
     return tl.cp_tensor.CPTensor((None, factors))
 
 
-def perform_CP(tOrig, r=6, tol=1e-6):
+def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False):
     """ Perform CP decomposition. """
     tFac = initialize_cp(tOrig, r)
 
@@ -221,16 +230,17 @@ def perform_CP(tOrig, r=6, tol=1e-6):
     # Precalculate the missingness patterns
     uniqueInfo = [np.unique(np.isfinite(B.T), axis=1, return_inverse=True) for B in unfolded]
 
-    for ii in range(2000):
+    tq = tqdm(range(maxiter), disable=(not progress))
+    for _ in tq:
         # Solve on each mode
         for m in range(len(tFac.factors)):
             kr = khatri_rao(tFac.factors, skip_matrix=m)
             tFac.factors[m] = censored_lstsq(kr, unfolded[m].T, uniqueInfo[m])
 
-        if ii % 2 == 0:
-            R2X_last = tFac.R2X
-            tFac.R2X = calcR2X(tFac, tOrig)
-            assert tFac.R2X > 0.0
+        R2X_last = tFac.R2X
+        tFac.R2X = calcR2X(tFac, tOrig)
+        tq.set_postfix(R2X=tFac.R2X, delta=tFac.R2X - R2X_last, refresh=False)
+        assert tFac.R2X > 0.0
 
         if tFac.R2X - R2X_last < tol:
             break
@@ -244,24 +254,26 @@ def perform_CP(tOrig, r=6, tol=1e-6):
     return tFac
 
 
-def perform_CMTF(tOrig, mOrig=None, r=9, tol=1e-6, maxiter=50):
+def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, progress=True):
     """ Perform CMTF decomposition. """
     assert tOrig.dtype == float
-    if mOrig is not None:
-        assert mOrig.dtype == float
+    assert mOrig.dtype == float
     tFac = initialize_cmtf(tOrig, mOrig, r)
 
     # Pre-unfold
     unfolded = np.hstack((tl.unfold(tOrig, 0), mOrig))
     missingM = np.all(np.isfinite(mOrig), axis=1)
+    assert np.sum(missingM) >= 1, "mOrig must contain at least one complete row"
     R2X = -np.inf
 
     # Precalculate the missingness patterns
     uniqueInfo = np.unique(np.isfinite(unfolded.T), axis=1, return_inverse=True)
 
-    for _ in range(maxiter):
-        tensor = np.nan_to_num(tOrig) + tl.cp_to_tensor(tFac) * np.isnan(tOrig)
-        tFac = parafac(tensor, r, 200, init=tFac, verbose=False, fixed_modes=[0], mask=np.isfinite(tOrig), linesearch=True, tol=1e-9)
+    tq = tqdm(range(maxiter), disable=(not progress))
+    for _ in tq:
+        for m in [1, 2]:
+            kr = khatri_rao(tFac.factors, skip_matrix=m)
+            tFac.factors[m] = censored_lstsq(kr, tl.unfold(tOrig, m).T)
 
         # Solve for the glycan matrix fit
         tFac.mFactor = np.linalg.lstsq(tFac.factors[0][missingM, :], mOrig[missingM, :], rcond=-1)[0].T
@@ -273,16 +285,16 @@ def perform_CMTF(tOrig, mOrig=None, r=9, tol=1e-6, maxiter=50):
 
         R2X_last = R2X
         R2X = calcR2X(tFac, tOrig, mOrig)
+        tq.set_postfix(R2X=R2X, delta=R2X - R2X_last, refresh=False)
         assert R2X > 0.0
 
         if R2X - R2X_last < tol:
             break
 
+    assert not np.all(tFac.mFactor == 0.0)
     tFac = cp_normalize(tFac)
     tFac = reorient_factors(tFac)
     tFac = sort_factors(tFac)
     tFac.R2X = R2X
-
-    print("R2X: " + str(tFac.R2X))
 
     return tFac

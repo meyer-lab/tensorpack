@@ -54,6 +54,7 @@ class Decomposition():
         self.sizePCA = [sum(flatData.shape) * rr for rr in self.rrs]
 
     def Q2X_chord(self, drop=10, repeat=10):
+<<<<<<< HEAD
         Q2X = np.zeros(repeat,self.rrs[-1])
         for x in range(repeat):
             missingCube = np.copy(self.data)
@@ -65,6 +66,10 @@ class Decomposition():
             
             tImp = np.copy(self.data)
             tImp[np.isfinite(missingCube)] = np.nan
+=======
+        self.chordQ2X = None  # df
+        pass
+>>>>>>> c3e67cfdd2ddc7f934b7e4afe931d23646ef57e2
 
             for rr in self.rrs:
                 tFac = self.method(missingCube, r=rr)
