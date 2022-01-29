@@ -5,29 +5,6 @@ from tensorly import partial_svd
 from .cmtf import perform_CP, calcR2X
 from .SVD_impute import IterativeSVD
 
-def impute_missing_mat(dat):
-    miss_idx = np.where(~np.isfinite(dat))
-    if len(miss_idx[0]) <= 0:
-        return dat
-    assert np.all(np.any(np.isfinite(dat), axis=0)), "Cannot impute if an entire column is empty"
-    assert np.all(np.any(np.isfinite(dat), axis=1)), "Cannot impute if an entire row is empty"
-
-    imp = np.copy(dat)
-    col_mean = np.nanmean(dat, axis=0, keepdims=True)
-    imp[miss_idx] = np.take(col_mean, miss_idx[1])
-
-    diff = 1.0
-    while diff > 1e-3:
-        U, S, V = partial_svd(imp, min(dat.shape) - 1)
-        scores = U @ np.diag(S)
-        loadings = V
-        recon = scores @ loadings
-        new_diff = norm(imp[miss_idx] - recon[miss_idx]) / norm(recon[miss_idx])
-        diff = new_diff
-        imp[miss_idx] = recon[miss_idx]
-    return imp
-
-
 class Decomposition():
     def __init__(self, data, max_rr=5):
         self.data = data
@@ -44,7 +21,8 @@ class Decomposition():
         dataShape = self.data.shape
         flatData = np.reshape(np.moveaxis(self.data, flattenon, 0), (dataShape[flattenon], -1))
         if not np.all(np.isfinite(flatData)):
-            flatData = impute_missing_mat(flatData)
+            si = IterativeSVD(rank=max(self.rrs), random_state=1)
+            flatData = si.fit_transform(flatData)
 
         U, S, V = partial_svd(flatData, max(self.rrs))
         scores = U @ np.diag(S)
@@ -54,7 +32,6 @@ class Decomposition():
         self.sizePCA = [sum(flatData.shape) * rr for rr in self.rrs]
 
     def Q2X_chord(self, drop=10, repeat=10):
-<<<<<<< HEAD
         Q2X = np.zeros(repeat,self.rrs[-1])
         for x in range(repeat):
             missingCube = np.copy(self.data)
@@ -66,10 +43,6 @@ class Decomposition():
             
             tImp = np.copy(self.data)
             tImp[np.isfinite(missingCube)] = np.nan
-=======
-        self.chordQ2X = None  # df
-        pass
->>>>>>> c3e67cfdd2ddc7f934b7e4afe931d23646ef57e2
 
             for rr in self.rrs:
                 tFac = self.method(missingCube, r=rr)
@@ -79,16 +52,15 @@ class Decomposition():
 
     def Q2X_entry(self, drop=10, repeat=5, comparePCA=True, flattenon=0):
         Q2X = np.zeros((repeat,self.rrs[-1]))
-        # Q2X = np.zeros((np.sum(np.isfinite(self.data)), self.rrs[-1]))
         Q2XPCA = np.zeros((repeat,self.rrs[-1]))
         for x in range(repeat):
             missingCube = np.copy(self.data)
             tImp = np.copy(self.data)
 
-            """
+
             # Option 1: checks if dropped values will create empty chords before removing
+            counter = 0
             for _ in range(drop):
-                # drops entries
                 removable = False
                 while not removable:
                     idxs = np.argwhere(np.isfinite(missingCube))
@@ -98,15 +70,16 @@ class Decomposition():
                     missingChordK = sum(np.isfinite(missingCube[i,j,:])) > 1
                     if missingChordI and missingChordJ and missingChordK:
                         missingCube[i, j, k] = np.nan
-                        removable = True 
+                        removable = True
+                        counter += 1
+            print(counter)
+
             """
-            """
-            Option 2: find values that must be kept and remove from the remaining data
+            # Option 2: find values that must be kept and remove from the remaining data
             1)  randomly find an minimum tensor to run PCA
             2)  prevent emin values from being removed in missingCube
             3)  remove # of values in missingCube
             4)  add emin values back in missingCube
-            """
 
             chooseCube = np.isfinite(tImp)
             idxs = np.argwhere(chooseCube)
@@ -115,7 +88,6 @@ class Decomposition():
             # array representing the chords in every mode (row)
             for i in range(tImp.ndim):
                 modeidxs[i] = [1 for n in range(tImp.shape[i])] + [0 for m in range(len(modeidxs[i])-tImp.shape[i])]
-            # self.modeidxs = modeidxs
             
             counter = 0
             while np.sum(modeidxs) > 0:
@@ -131,15 +103,14 @@ class Decomposition():
                         modeidxs[2,k] -= 1
                     np.delete(idxs, ranidx, axis=0)
                     counter += 1
-            
             assert idxs.shape[0] >= drop
-            # testing       print(str(counter) + " values withheld from drop")
-            
+            # print(str(counter) + " values withheld from drop")
+
             for _ in range(drop):
                 i, j, k = idxs[np.random.choice(idxs.shape[0], 1)][0]
                 missingCube[i,j,k] = np.nan
-
-            # print(np.sum(np.isnan(missingCube)) + " values dropped") # testing
+            print(np.sum(np.isnan(missingCube)) + " values dropped")
+            """
             
             for rr in self.rrs:
                 tFac = self.method(missingCube, r=rr)
@@ -158,9 +129,9 @@ class Decomposition():
             """
             
             if comparePCA:
-                si = IterativeSVD(rank=rank, random_state=1)
+                si = IterativeSVD(rank=max(self.rrs), random_state=1)
                 missingMat = np.reshape(np.moveaxis(missingCube, flattenon, 0), (missingCube.shape[flattenon], -1))
-                missingMat = impute_missing_mat(missingMat)
+                missingMat = si.fit_transform(missingMat)
                 mImp = np.reshape(np.moveaxis(tImp, flattenon, 0), (tImp.shape[flattenon], -1))
 
                 U, S, V = partial_svd(missingMat, max(self.rrs))
