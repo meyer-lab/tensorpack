@@ -21,9 +21,9 @@ class Decomposition():
         pass
 
     def perform_tfac(self):
-        self.tfac = [self.method(self.data, r=rr) for rr in self.rrs]
-        self.tR2X = [calcR2X(c, tIn=self.data) for c in self.tfac]
-        self.tsize = [rr * sum(self.tfac[0].shape) for rr in self.rrs]
+        self.Tfac = [self.method(self.data, r=rr) for rr in self.rrs]
+        self.TR2X = [calcR2X(c, tIn=self.data) for c in self.tfac]
+        self.Tsize = [rr * sum(self.tfac[0].shape) for rr in self.rrs]
 
     def perform_PCA(self, flattenon=0):
         dataShape = self.data.shape
@@ -45,7 +45,6 @@ class Decomposition():
             missingCube = np.copy(self.data)
             tImp = np.copy(self.data)
             
-            counter = 0
             for _ in range(drop):
                 removable = False
                 while not removable:
@@ -55,19 +54,15 @@ class Decomposition():
                     if selection == 0:
                         if np.sum(np.isfinite(missingCube[:, j, k])) > 1:
                             missingCube[:, j, k] = np.nan
-                            counter += 1
                             removable = True
                     elif selection == 1:
                         if np.sum(np.isfinite(missingCube[i, :, k])) > 1:
                             missingCube[i, :, k] = np.nan
-                            counter += 1
                             removable = True
                     elif selection == 2:
                         if np.sum(np.isfinite(missingCube[i, j, :])) > 1:
                             missingCube[i, j, :] = np.nan
-                            counter += 1
                             removable = True
-            print(str(counter) + " chords dropped")
             
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:

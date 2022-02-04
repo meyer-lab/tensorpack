@@ -60,16 +60,6 @@ def create_missingness(tensor, drop):
         i, j, k = idxs[idx]
         tensor[i, j, k] = np.nan
 
-
-def test_entryq2x(test, drop=10, repeat=5):
-    test.Q2X_entry(drop, repeat)
-    print(test.entryQ2X)
-    print(test.entryQ2XPCA)
-    chord_drop = max(test.data.shape) // 2
-    test.Q2X_chord(chord_drop, repeat)
-    print(test.chordQ2X)
-
-
 def create_tensors():
     shape = (10,10,10)
     tensor_1 = tl.cp_to_tensor(random_cp(shape, 3))
@@ -86,3 +76,11 @@ def create_tensors():
     # test_alter - (181,22,41)  //  natural missingness       //  93577 values (57.3%)
     return test_1, test_2, test_atyeo, test_alter
 
+
+def test_entryq2x(test, drop=10, repeat=5):
+    test.Q2X_entry(drop, repeat)
+    print(test.entryQ2X)
+    print(test.entryQ2XPCA)
+    chord_drop = max(test.data.shape) // 2
+    test.Q2X_chord(chord_drop, repeat)
+    print(test.chordQ2X)
