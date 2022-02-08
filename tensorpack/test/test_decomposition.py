@@ -6,9 +6,20 @@ import numpy as np
 import os
 import tensorly as tl
 from tensorly.random import random_cp
-from ..decomposition import Decomposition
+from ..decomposition import impute_missing_mat, Decomposition
 from ..cmtf import perform_CP, calcR2X
 from tensordata.atyeo import data as atyeo
+
+
+def test_impute_missing_mat():
+    errs = []
+    for _ in range(20):
+        r = np.dot(np.random.rand(20, 5), np.random.rand(5, 18))
+        filt = np.random.rand(20, 18) < 0.1
+        rc = r.copy()
+        rc[filt] = np.nan
+        errs.append(np.sum((r - impute_missing_mat(rc))[filt] ** 2) / np.sum(r[filt] ** 2))
+    assert np.mean(errs) < 0.1
 
 
 def test_decomp_obj():
