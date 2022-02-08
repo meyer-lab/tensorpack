@@ -6,6 +6,7 @@ from .cmtf import perform_CP, calcR2X
 
 
 def impute_missing_mat(dat):
+    import warnings
     miss_idx = np.where(~np.isfinite(dat))
     if len(miss_idx[0]) <= 0:
         return dat
@@ -23,7 +24,8 @@ def impute_missing_mat(dat):
         loadings = V
         recon = scores @ loadings
         new_diff = norm(imp[miss_idx] - recon[miss_idx]) / norm(recon[miss_idx])
-        assert new_diff < diff, "Matrix imputation difference is not decreasing"
+        if new_diff > diff:
+            warnings.warn("Matrix imputation difference is not decreasing", RuntimeWarning)
         diff = new_diff
         imp[miss_idx] = recon[miss_idx]
     return imp
