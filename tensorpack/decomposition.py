@@ -13,6 +13,32 @@ def create_missingness(tensor, drop=15):
         i, j, k = idxs[idx]
         tensor[i, j, k] = np.nan
 
+def impute_missing_mat(dat):
+    import warnings
+    miss_idx = np.where(~np.isfinite(dat))
+    if len(miss_idx[0]) <= 0:
+        return dat
+    assert np.all(np.any(np.isfinite(dat), axis=0)), "Cannot impute if an entire column is empty"
+    assert np.all(np.any(np.isfinite(dat), axis=1)), "Cannot impute if an entire row is empty"
+
+    imp = np.copy(dat)
+    col_mean = np.nanmean(dat, axis=0, keepdims=True)
+    imp[miss_idx] = np.take(col_mean, miss_idx[1])
+
+    diff = 1.0
+    while diff > 1e-3:
+        U, S, V = partial_svd(imp, min(dat.shape) - 1)
+        scores = U @ np.diag(S)
+        loadings = V
+        recon = scores @ loadings
+        new_diff = norm(imp[miss_idx] - recon[miss_idx]) / norm(recon[miss_idx])
+        if new_diff > diff:
+            warnings.warn("Matrix imputation difference is not decreasing", RuntimeWarning)
+        diff = new_diff
+        imp[miss_idx] = recon[miss_idx]
+    return imp
+
+
 class Decomposition():
     def __init__(self, data, max_rr=5, method=perform_CP):
         self.data = data
