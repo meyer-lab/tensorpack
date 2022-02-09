@@ -10,6 +10,7 @@ from ..decomposition import Decomposition
 from ..cmtf import perform_CP, calcR2X
 from tensordata.atyeo import data as atyeo
 from tensordata.alter import data as alter
+from tensordata.zohar import data as zohar
 
 
 def test_decomp_obj():
@@ -64,8 +65,9 @@ def create_tensors():
     shape = (10,10,10)
     tensor_1 = tl.cp_to_tensor(random_cp(shape, 3))
     test_1 =  Decomposition(tensor_1)
-    tensor_2 = noise = np.random.normal(0.5,0.15, shape)
-    tensor_2 = np.add(tensor_1,noise)
+    tensor = tl.cp_to_tensor(random_cp(shape, 3))
+    noise = np.random.normal(0.5,0.15, shape)
+    tensor_2 = np.add(tensor,noise)
     create_missingness(tensor_2, drop=100)
     test_2 = Decomposition(tensor_2)
     test_atyeo = Decomposition(atyeo().tensor)
@@ -79,8 +81,11 @@ def create_tensors():
 
 def test_entryq2x(test, drop=10, repeat=5):
     test.Q2X_entry(drop, repeat)
+    print("entry Q2X values for CP")
     print(test.entryQ2X)
+    print("entry Q2X values for PCA")
     print(test.entryQ2XPCA)
     chord_drop = max(test.data.shape) // 2
     test.Q2X_chord(chord_drop, repeat)
+    print("chord Q2X values for CP")
     print(test.chordQ2X)

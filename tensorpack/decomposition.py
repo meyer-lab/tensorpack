@@ -1,9 +1,7 @@
 import pickle
-from random import choice, random
 import numpy as np
-from numpy.linalg import norm
-from tensorly import partial_svd
 from .cmtf import perform_CP, calcR2X
+from tensorly import partial_svd
 from .SVD_impute import IterativeSVD
 
 def create_missingness(tensor, drop=15):
@@ -74,17 +72,15 @@ class Decomposition():
     def Q2X_entry(self, drop=20, repeat=5, comparePCA=True):
         Q2X = np.zeros((repeat,self.rrs[-1]))
         Q2XPCA = np.zeros((repeat,self.rrs[-1]))
-
         for x in range(repeat):
             missingCube = np.copy(self.data)
             tImp = np.copy(self.data)
+            idxs = np.argwhere(np.isfinite(tImp))
             
             # finds values that must be kept and only allow dropped values from the remaining data
             modeidxs = np.zeros((tImp.ndim,max(tImp.shape)))
             for i in range(tImp.ndim):
                 modeidxs[i] = [1 for n in range(tImp.shape[i])] + [0 for m in range(len(modeidxs[i])-tImp.shape[i])]
-            
-            idxs = np.argwhere(np.isfinite(tImp))
             while np.sum(modeidxs) > 0:
                 ranmidx = np.random.choice(idxs.shape[0], 1) 
                 i,j,k = idxs[ranmidx][0]
@@ -95,7 +91,6 @@ class Decomposition():
                     np.delete(idxs, ranmidx, axis=0)
             assert idxs.shape[0] >= drop
             # print(str(counter) + " values withheld from drop")
-            
             ranidxs = np.random.choice(idxs.shape[0], drop, replace=False)
             for idx in ranidxs:
                 i, j, k = idxs[idx]
@@ -122,47 +117,6 @@ class Decomposition():
     
         self.entryQ2X = Q2X
     
-    def Q2X_entry_deprecated(self, drop=20, repeat=5, comparePCA=True):
-        Q2X = np.zeros((repeat,self.rrs[-1]))
-        Q2XPCA = np.zeros((repeat,self.rrs[-1]))
-
-        for x in range(repeat):
-            missingCube = np.copy(self.data)
-            tImp = np.copy(self.data)
-
-            # Option 1: checks if dropped values will create empty chords before removing
-            for _ in range(drop):
-                removable = False
-                while not removable:
-                    idxs = np.argwhere(np.isfinite(missingCube))
-                    i, j, k = idxs[np.random.choice(idxs.shape[0], 1)][0]
-                    missingChordI = sum(np.isfinite(missingCube[:,j,k])) > 1
-                    missingChordJ = sum(np.isfinite(missingCube[i,:,k])) > 1
-                    missingChordK = sum(np.isfinite(missingCube[i,j,:])) > 1
-                    if missingChordI and missingChordJ and missingChordK:
-                        missingCube[i, j, k] = np.nan
-                        removable = True
-
-            tImp[np.isfinite(missingCube)] = np.nan
-            
-            for rr in self.rrs:
-                tFac = self.method(missingCube, r=rr)
-                Q2X[x,rr-1] = calcR2X(tFac, tIn=tImp)
-            
-            if comparePCA:
-                si = IterativeSVD(rank=max(self.rrs), random_state=1)
-                missingMat = np.reshape(np.moveaxis(missingCube, 0, 0), (missingCube.shape[0], -1))
-                missingMat = si.fit_transform(missingMat)
-                mImp = np.reshape(np.moveaxis(tImp, 0, 0), (tImp.shape[0], -1))
-
-                U, S, V = partial_svd(missingMat, max(self.rrs))
-                scores = U @ np.diag(S)
-                loadings = V
-                recon = [scores[:, :rr] @ loadings[:rr, :] for rr in self.rrs]
-                Q2XPCA[x,:] = [calcR2X(c, mIn = mImp) for c in recon]
-                self.entryQ2XPCA = Q2XPCA
-    
-        self.entryQ2X = Q2X
 
     def save(self, pfile):
         with open(pfile, "wb") as output_file:
