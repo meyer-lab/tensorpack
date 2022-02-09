@@ -1,15 +1,9 @@
 import pickle
 import numpy as np
+from numpy.linalg import norm
 from .cmtf import perform_CP, calcR2X
 from tensorly import partial_svd
 from .SVD_impute import IterativeSVD
-
-def create_missingness(tensor, drop=15):
-    idxs = np.argwhere(np.isfinite(tensor))
-    ranidx = np.random.choice(idxs.shape[0], drop) 
-    for idx in ranidx:
-        i, j, k = idxs[idx]
-        tensor[i, j, k] = np.nan
 
 def impute_missing_mat(dat):
     import warnings
