@@ -300,7 +300,7 @@ pandas = "^1.4.0"
 type = "git"
 url = "https://github.com/meyer-lab/tensordata.git"
 reference = "main"
-resolved_reference = "d697a42cb4a8a87d7f3d3826ddfb1dba0a9bc71e"
+resolved_reference = "e291a5e68bdb813496f610302b3cf6d222d7f914"
 
 [[package]]
 name = "tensorly"

@@ -40,7 +40,7 @@ class Decomposition():
 
     def perform_tfac(self):
         self.Tfac = [self.method(self.data, r=rr) for rr in self.rrs]
-        self.TR2X = [calcR2X(c, tIn=self.data) for c in self.tfac]
+        self.TR2X = [calcR2X(c, tIn=self.data) for c in self.Tfac]
         self.Tsize = [rr * sum(self.tfac[0].shape) for rr in self.rrs]
 
     def perform_PCA(self, flattenon=0):
