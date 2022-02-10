@@ -9,8 +9,6 @@ from tensorly.random import random_cp
 from ..decomposition import impute_missing_mat, Decomposition
 from ..cmtf import perform_CP, calcR2X
 from tensordata.atyeo import data as atyeo
-from tensordata.alter import data as alter
-from tensordata.zohar import data as zohar
 
 
 def test_impute_missing_mat():
@@ -71,32 +69,3 @@ def create_missingness(tensor, drop):
     for idx in ranidx:
         i, j, k = idxs[idx]
         tensor[i, j, k] = np.nan
-
-def create_tensors():
-    shape = (10,10,10)
-    tensor_1 = tl.cp_to_tensor(random_cp(shape, 3))
-    test_1 =  Decomposition(tensor_1)
-    tensor = tl.cp_to_tensor(random_cp(shape, 3))
-    noise = np.random.normal(0.5,0.15, shape)
-    tensor_2 = np.add(tensor,noise)
-    create_missingness(tensor_2, drop=100)
-    test_2 = Decomposition(tensor_2)
-    test_atyeo = Decomposition(atyeo().tensor)
-    test_alter = Decomposition(alter().tensor)
-    # test_1     - (10,10,10)   //  full tensor               //   1000 values
-    # test_2     - (10,10,10)   //  artifical nans & noise    //    900 values (90.0%)
-    # test_atyeo - (22,12,3)    //  full tensor               //    792 values
-    # test_alter - (181,22,41)  //  natural missingness       //  93577 values (57.3%)
-    return test_1, test_2, test_atyeo, test_alter
-
-
-def test_entryq2x(test, drop=10, repeat=5):
-    test.Q2X_entry(drop, repeat)
-    print("entry Q2X values for CP")
-    print(test.entryQ2X)
-    print("entry Q2X values for PCA")
-    print(test.entryQ2XPCA)
-    chord_drop = max(test.data.shape) // 2
-    test.Q2X_chord(chord_drop, repeat)
-    print("chord Q2X values for CP")
-    print(test.chordQ2X)
