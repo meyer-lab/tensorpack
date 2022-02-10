@@ -55,7 +55,7 @@ class Decomposition():
         loadings = V
         recon = [scores[:, :rr] @ loadings[:rr, :] for rr in self.rrs]
         self.PCAR2X = [calcR2X(c, mIn=flatData) for c in recon]
-        self.sizePCA = [sum(flatData.shape) * rr for rr in self.rrs]
+        self.PCAsize = [sum(flatData.shape) * rr for rr in self.rrs]
 
     def Q2X_chord(self, drop=5, repeat=5):
         Q2X = np.zeros((repeat,self.rrs[-1]))

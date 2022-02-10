@@ -26,16 +26,16 @@ def test_decomp_obj():
     a = Decomposition(atyeo().tensor)
     a.perform_tfac()
     a.perform_PCA()
-    assert len(a.PCAR2X) == len(a.sizePCA)
-    assert len(a.TR2X) == len(a.sizeT)
+    assert len(a.PCAR2X) == len(a.PCAsize)
+    assert len(a.TR2X) == len(a.Tsize)
 
     # test decomp save
     fname = "test_temp_atyeo.pkl"
     a.save(fname)
     b = Decomposition(None)
     b.load(fname)
-    assert len(b.PCAR2X) == len(b.sizePCA)
-    assert len(b.TR2X) == len(b.sizeT)
+    assert len(b.PCAR2X) == len(b.PCAsize)
+    assert len(b.TR2X) == len(b.Tsize)
     os.remove(fname)
 
 
@@ -47,8 +47,8 @@ def test_missing_obj():
         a = Decomposition(dat)
         a.perform_tfac()
         a.perform_PCA()
-        assert len(a.PCAR2X) == len(a.sizePCA)
-        assert len(a.TR2X) == len(a.sizeT)
+        assert len(a.PCAR2X) == len(a.PCAsize)
+        assert len(a.TR2X) == len(a.Tsize)
 
 
 def test_known_rank():
