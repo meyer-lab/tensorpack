@@ -6,9 +6,10 @@ import numpy as np
 import os
 import tensorly as tl
 from tensorly.random import random_cp
-from ..decomposition import impute_missing_mat, Decomposition
+from ..decomposition import Decomposition
 from ..cmtf import perform_CP, calcR2X
 from tensordata.atyeo import data as atyeo
+from ..SVD_impute import IterativeSVD
 
 
 def test_impute_missing_mat():
@@ -18,8 +19,9 @@ def test_impute_missing_mat():
         filt = np.random.rand(20, 18) < 0.1
         rc = r.copy()
         rc[filt] = np.nan
-        errs.append(np.sum((r - impute_missing_mat(rc))[filt] ** 2) / np.sum(r[filt] ** 2))
-    assert np.mean(errs) < 0.1
+        imp = IterativeSVD(rank=1, random_state=1).fit_transform(rc)
+        errs.append(np.sum((r - imp)[filt] ** 2) / np.sum(r[filt] ** 2))
+    assert np.mean(errs) < 0.03
 
 
 def test_decomp_obj():
