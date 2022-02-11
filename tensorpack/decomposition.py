@@ -3,32 +3,8 @@ import numpy as np
 from numpy.linalg import norm
 from .cmtf import perform_CP, calcR2X
 from tensorly import partial_svd
+from .cmtf import perform_CP, calcR2X
 from .SVD_impute import IterativeSVD
-
-def impute_missing_mat(dat):
-    import warnings
-    miss_idx = np.where(~np.isfinite(dat))
-    if len(miss_idx[0]) <= 0:
-        return dat
-    assert np.all(np.any(np.isfinite(dat), axis=0)), "Cannot impute if an entire column is empty"
-    assert np.all(np.any(np.isfinite(dat), axis=1)), "Cannot impute if an entire row is empty"
-
-    imp = np.copy(dat)
-    col_mean = np.nanmean(dat, axis=0, keepdims=True)
-    imp[miss_idx] = np.take(col_mean, miss_idx[1])
-
-    diff = 1.0
-    while diff > 1e-3:
-        U, S, V = partial_svd(imp, min(dat.shape) - 1)
-        scores = U @ np.diag(S)
-        loadings = V
-        recon = scores @ loadings
-        new_diff = norm(imp[miss_idx] - recon[miss_idx]) / norm(recon[miss_idx])
-        if new_diff > diff:
-            warnings.warn("Matrix imputation difference is not decreasing", RuntimeWarning)
-        diff = new_diff
-        imp[miss_idx] = recon[miss_idx]
-    return imp
 
 
 class Decomposition():
@@ -47,8 +23,7 @@ class Decomposition():
         dataShape = self.data.shape
         flatData = np.reshape(np.moveaxis(self.data, flattenon, 0), (dataShape[flattenon], -1))
         if not np.all(np.isfinite(flatData)):
-            si = IterativeSVD(rank=max(self.rrs), random_state=1)
-            flatData = si.fit_transform(flatData)
+            flatData = IterativeSVD(rank=1, random_state=1).fit_transform(flatData)
 
         U, S, V = partial_svd(flatData, max(self.rrs))
         scores = U @ np.diag(S)
