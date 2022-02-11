@@ -86,6 +86,7 @@ class Decomposition():
                             if np.sum(np.isfinite(missingCube[i, j, k, :])) > 1:
                                 missingCube[i, j, k, :] = np.nan
                                 removable = True
+
             elif tImp.ndim == 3:
                 for _ in range(drop):
                     removable = False
@@ -137,11 +138,11 @@ class Decomposition():
                         modeidxs[3,l] = 0
                         np.delete(idxs, ranmidx, axis=0)
                 assert idxs.shape[0] >= drop
-                
                 ranidxs = np.random.choice(idxs.shape[0], drop, replace=False)
                 for idx in ranidxs:
                     i,j,k,l = idxs[idx]
                     missingCube[i,j,k,l] = np.nan
+
             elif tImp.ndim == 3:
                 while np.sum(modeidxs) > 0:
                     ranmidx = np.random.choice(idxs.shape[0], 1) 
@@ -152,12 +153,10 @@ class Decomposition():
                         modeidxs[2,k] = 0
                         np.delete(idxs, ranmidx, axis=0)
                 assert idxs.shape[0] >= drop
-
                 ranidxs = np.random.choice(idxs.shape[0], drop, replace=False)
                 for idx in ranidxs:
                     i,j,k = idxs[idx]
                     missingCube[i,j,k] = np.nan
-
 
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:
@@ -169,8 +168,8 @@ class Decomposition():
                 missingMat = np.reshape(np.moveaxis(missingCube, 0, 0), (missingCube.shape[0], -1))
                 mImp = np.reshape(np.moveaxis(tImp, 0, 0), (tImp.shape[0], -1))
 
-                imputedMat = si.fit_transform(missingMat)
-                U, S, V = partial_svd(imputedMat, max(self.rrs))
+                missingMat = si.fit_transform(missingMat)
+                U, S, V = partial_svd(missingMat, max(self.rrs))
                 scores = U @ np.diag(S)
                 loadings = V
                 recon = [scores[:, :rr] @ loadings[:rr, :] for rr in self.rrs]
