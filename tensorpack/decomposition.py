@@ -63,24 +63,48 @@ class Decomposition():
             missingCube = np.copy(self.data)
             tImp = np.copy(self.data)
             
-            for _ in range(drop):
-                removable = False
-                while not removable:
-                    idxs = np.argwhere(np.isfinite(missingCube))
-                    i, j, k = idxs[np.random.choice(idxs.shape[0], 1)][0]
-                    selection = np.random.choice([0,1,2])
-                    if selection == 0:
-                        if np.sum(np.isfinite(missingCube[:, j, k])) > 1:
-                            missingCube[:, j, k] = np.nan
-                            removable = True
-                    elif selection == 1:
-                        if np.sum(np.isfinite(missingCube[i, :, k])) > 1:
-                            missingCube[i, :, k] = np.nan
-                            removable = True
-                    elif selection == 2:
-                        if np.sum(np.isfinite(missingCube[i, j, :])) > 1:
-                            missingCube[i, j, :] = np.nan
-                            removable = True
+            if tImp.ndim == 4:
+                for _ in range(drop):
+                    removable = False
+                    while not removable:
+                        idxs = np.argwhere(np.isfinite(missingCube))
+                        i,j,k,l = idxs[np.random.choice(idxs.shape[0], 1)][0]
+                        selection = np.random.choice([0,1,2])
+                        if selection == 0:
+                            if np.sum(np.isfinite(missingCube[:, j, k, l])) > 1:
+                                missingCube[:, j, k, l] = np.nan
+                                removable = True
+                        elif selection == 1:
+                            if np.sum(np.isfinite(missingCube[i, :, k, l])) > 1:
+                                missingCube[i, :, k, l] = np.nan
+                                removable = True
+                        elif selection == 2:
+                            if np.sum(np.isfinite(missingCube[i, j, :, l])) > 1:
+                                missingCube[i, j, :, l] = np.nan
+                                removable = True
+                        elif selection == 3:
+                            if np.sum(np.isfinite(missingCube[i, j, k, :])) > 1:
+                                missingCube[i, j, k, :] = np.nan
+                                removable = True
+            elif tImp.ndim == 3:
+                for _ in range(drop):
+                    removable = False
+                    while not removable:
+                        idxs = np.argwhere(np.isfinite(missingCube))
+                        i, j, k = idxs[np.random.choice(idxs.shape[0], 1)][0]
+                        selection = np.random.choice([0,1,2])
+                        if selection == 0:
+                            if np.sum(np.isfinite(missingCube[:, j, k])) > 1:
+                                missingCube[:, j, k] = np.nan
+                                removable = True
+                        elif selection == 1:
+                            if np.sum(np.isfinite(missingCube[i, :, k])) > 1:
+                                missingCube[i, :, k] = np.nan
+                                removable = True
+                        elif selection == 2:
+                            if np.sum(np.isfinite(missingCube[i, j, :])) > 1:
+                                missingCube[i, j, :] = np.nan
+                                removable = True
             
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:
@@ -101,21 +125,39 @@ class Decomposition():
             modeidxs = np.zeros((tImp.ndim,max(tImp.shape)))
             for i in range(tImp.ndim):
                 modeidxs[i] = [1 for n in range(tImp.shape[i])] + [0 for m in range(len(modeidxs[i])-tImp.shape[i])]
-            while np.sum(modeidxs) > 0:
-                ranmidx = np.random.choice(idxs.shape[0], 1) 
-                i,j,k = idxs[ranmidx][0]
-                if modeidxs[0,i] > 0 or modeidxs[1,j] > 0 or modeidxs[2,k] > 0:
-                    modeidxs[0,i] = 0
-                    modeidxs[1,j] = 0
-                    modeidxs[2,k] = 0
-                    np.delete(idxs, ranmidx, axis=0)
-            assert idxs.shape[0] >= drop
-            # print(str(counter) + " values withheld from drop")
-            ranidxs = np.random.choice(idxs.shape[0], drop, replace=False)
-            for idx in ranidxs:
-                i, j, k = idxs[idx]
-                missingCube[i,j,k] = np.nan
-            # print(str(np.sum(np.isnan(missingCube))) + " values dropped")
+            
+            if tImp.ndim == 4:
+                while np.sum(modeidxs) > 0:
+                    ranmidx = np.random.choice(idxs.shape[0], 1) 
+                    i,j,k,l = idxs[ranmidx][0]
+                    if modeidxs[0,i] > 0 or modeidxs[1,j] > 0 or modeidxs[2,k] > 0 or  modeidxs[3,l] > 0:
+                        modeidxs[0,i] = 0
+                        modeidxs[1,j] = 0
+                        modeidxs[2,k] = 0
+                        modeidxs[3,l] = 0
+                        np.delete(idxs, ranmidx, axis=0)
+                assert idxs.shape[0] >= drop
+                
+                ranidxs = np.random.choice(idxs.shape[0], drop, replace=False)
+                for idx in ranidxs:
+                    i,j,k,l = idxs[idx]
+                    missingCube[i,j,k,l] = np.nan
+            elif tImp.ndim == 3:
+                while np.sum(modeidxs) > 0:
+                    ranmidx = np.random.choice(idxs.shape[0], 1) 
+                    i,j,k = idxs[ranmidx][0]
+                    if modeidxs[0,i] > 0 or modeidxs[1,j] > 0 or modeidxs[2,k] > 0:
+                        modeidxs[0,i] = 0
+                        modeidxs[1,j] = 0
+                        modeidxs[2,k] = 0
+                        np.delete(idxs, ranmidx, axis=0)
+                assert idxs.shape[0] >= drop
+
+                ranidxs = np.random.choice(idxs.shape[0], drop, replace=False)
+                for idx in ranidxs:
+                    i,j,k = idxs[idx]
+                    missingCube[i,j,k] = np.nan
+
 
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:
@@ -125,10 +167,10 @@ class Decomposition():
             if comparePCA:
                 si = IterativeSVD(rank=max(self.rrs), random_state=1)
                 missingMat = np.reshape(np.moveaxis(missingCube, 0, 0), (missingCube.shape[0], -1))
-                missingMat = si.fit_transform(missingMat)
                 mImp = np.reshape(np.moveaxis(tImp, 0, 0), (tImp.shape[0], -1))
 
-                U, S, V = partial_svd(missingMat, max(self.rrs))
+                imputedMat = si.fit_transform(missingMat)
+                U, S, V = partial_svd(imputedMat, max(self.rrs))
                 scores = U @ np.diag(S)
                 loadings = V
                 recon = [scores[:, :rr] @ loadings[:rr, :] for rr in self.rrs]
