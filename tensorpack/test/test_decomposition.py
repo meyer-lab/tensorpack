@@ -30,8 +30,8 @@ def test_decomp_obj():
     a = Decomposition(atyeo().tensor)
     a.perform_tfac()
     a.perform_PCA()
-    assert len(a.PCAR2X) == len(a.PCAsize)
-    assert len(a.TR2X) == len(a.Tsize)
+    assert len(a.PCAR2X) == len(a.sizePCA)
+    assert len(a.TR2X) == len(a.sizeT)
 
     # test decomp save
     fname = "test_temp_atyeo.pkl"
