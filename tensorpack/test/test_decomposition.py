@@ -9,6 +9,8 @@ from tensorly.random import random_cp
 from ..decomposition import Decomposition
 from ..cmtf import perform_CP, calcR2X
 from tensordata.atyeo import data as atyeo
+from tensordata.alter import data as alter
+from tensordata.zohar import data as zohar
 from ..SVD_impute import IterativeSVD
 
 
@@ -71,3 +73,54 @@ def create_missingness(tensor, drop):
     for idx in ranidx:
         i, j, k = idxs[idx]
         tensor[i, j, k] = np.nan
+
+def test_impute_alter():
+    test = Decomposition(alter().tensor)
+    test.Q2X_chord()
+    print("\nChord Q2X")
+    print(test.chordQ2X)
+    test.Q2X_entry()
+    print("\nEntry Q2X (cp tensor)")
+    print(test.entryQ2X)
+    print("\nEntry Q2X (pca)")
+    print(test.entryQ2XPCA)
+
+def test_impute_zohar():
+    test = Decomposition(zohar().tensor)
+    test.Q2X_chord()
+    print("\nChord Q2X")
+    print(test.chordQ2X)
+    test.Q2X_entry()
+    print("\nEntry Q2X (cp tensor)")
+    print(test.entryQ2X)
+    print("\nEntry Q2X (pca)")
+    print(test.entryQ2XPCA)
+
+def test_impute_random():
+    shape = (10,10,10)
+    test = Decomposition(tl.cp_to_tensor(random_cp(shape, 10)))
+    test.Q2X_chord()
+    print("\nChord Q2X")
+    print(test.chordQ2X)
+    test.Q2X_entry()
+    print("\nEntry Q2X (cp tensor)")
+    print(test.entryQ2X)
+    print("\nEntry Q2X (pca)")
+    print(test.entryQ2XPCA)
+
+def test_impute_noise_missing():
+    shape = (10,10,10)
+    tensor = tl.cp_to_tensor(random_cp(shape, 10))
+    create_missingness(tensor,300)
+    noise = np.random.normal(0.5,0.15, shape)
+    tensor_2 = np.add(tensor,noise)
+
+    test = Decomposition(tensor_2)
+    test.Q2X_chord()
+    print("\nChord Q2X")
+    print(test.chordQ2X)
+    test.Q2X_entry()
+    print("\nEntry Q2X (cp tensor)")
+    print(test.entryQ2X)
+    print("\nEntry Q2X (pca)")
+    print(test.entryQ2XPCA)
