@@ -2,8 +2,9 @@
 Testing Decomposition
 """
 
-import numpy as np
 import os
+from timeit import repeat
+import numpy as np
 import tensorly as tl
 from tensorly.random import random_cp
 from ..decomposition import Decomposition
@@ -69,44 +70,41 @@ def test_known_rank():
 
 def create_missingness(tensor, drop):
     idxs = np.argwhere(np.isfinite(tensor))
-    ranidx = np.random.choice(idxs.shape[0], drop) 
-    for idx in ranidx:
+    ranidxs = np.random.choice(idxs.shape[0], drop, replace=False) 
+    for idx in ranidxs:
         i, j, k = idxs[idx]
         tensor[i, j, k] = np.nan
 
 def test_impute_alter():
     test = Decomposition(alter().tensor)
-    test.Q2X_chord()
-    print("\nChord Q2X")
-    print(test.chordQ2X)
-    test.Q2X_entry()
-    print("\nEntry Q2X (cp tensor)")
-    print(test.entryQ2X)
-    print("\nEntry Q2X (pca)")
-    print(test.entryQ2XPCA)
+    test.Q2X_chord(drop=30, repeat=1)
+    assert max(test.chordQ2X[0]) >= .8
+    test.Q2X_entry(drop=9000,repeat=1)
+    assert len(test.entryQ2X) == len(test.entryQ2XPCA)
+    assert len(test.entryQ2X[0]) == len(test.entryQ2XPCA[0])
+    assert max(test.entryQ2X[0]) >= .9
+    assert max(test.entryQ2XPCA[0]) >= .8
 
 def test_impute_zohar():
     test = Decomposition(zohar().tensor)
-    test.Q2X_chord()
-    print("\nChord Q2X")
-    print(test.chordQ2X)
-    test.Q2X_entry()
-    print("\nEntry Q2X (cp tensor)")
-    print(test.entryQ2X)
-    print("\nEntry Q2X (pca)")
-    print(test.entryQ2XPCA)
+    test.Q2X_chord(drop=5, repeat=1)
+    assert max(test.chordQ2X[0]) >= .4
+    test.Q2X_entry(drop=3000,repeat=1)
+    assert len(test.entryQ2X) == len(test.entryQ2XPCA)
+    assert len(test.entryQ2X[0]) == len(test.entryQ2XPCA[0])
+    assert max(test.entryQ2X[0]) >= .6
+    assert max(test.entryQ2XPCA[0]) >= .4
 
 def test_impute_random():
     shape = (10,10,10)
     test = Decomposition(tl.cp_to_tensor(random_cp(shape, 10)))
-    test.Q2X_chord()
-    print("\nChord Q2X")
-    print(test.chordQ2X)
-    test.Q2X_entry()
-    print("\nEntry Q2X (cp tensor)")
-    print(test.entryQ2X)
-    print("\nEntry Q2X (pca)")
-    print(test.entryQ2XPCA)
+    test.Q2X_chord(drop=10, repeat=1)
+    assert max(test.chordQ2X[0]) >= .95
+    test.Q2X_entry(drop=100, repeat=1)
+    assert len(test.entryQ2X) == len(test.entryQ2XPCA)
+    assert len(test.entryQ2X[0]) == len(test.entryQ2XPCA[0])
+    assert max(test.entryQ2X[0]) >= .95
+    assert max(test.entryQ2XPCA[0]) >= .8
 
 def test_impute_noise_missing():
     shape = (10,10,10)
@@ -116,11 +114,10 @@ def test_impute_noise_missing():
     tensor_2 = np.add(tensor,noise)
 
     test = Decomposition(tensor_2)
-    test.Q2X_chord()
-    print("\nChord Q2X")
-    print(test.chordQ2X)
-    test.Q2X_entry()
-    print("\nEntry Q2X (cp tensor)")
-    print(test.entryQ2X)
-    print("\nEntry Q2X (pca)")
-    print(test.entryQ2XPCA)
+    test.Q2X_chord(drop=10, repeat=1)
+    assert max(test.chordQ2X[0]) >= .95
+    test.Q2X_entry(drop=100, repeat=1)
+    assert len(test.entryQ2X) == len(test.entryQ2XPCA)
+    assert len(test.entryQ2X[0]) == len(test.entryQ2XPCA[0])
+    assert max(test.entryQ2X[0]) >= .95
+    assert max(test.entryQ2XPCA[0]) >= .8
