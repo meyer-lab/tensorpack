@@ -39,8 +39,8 @@ def test_decomp_obj():
     a.save(fname)
     b = Decomposition(None)
     b.load(fname)
-    assert len(b.PCAR2X) == len(b.PCAsize)
-    assert len(b.TR2X) == len(b.Tsize)
+    assert len(b.PCAR2X) == len(b.sizePCA)
+    assert len(b.TR2X) == len(b.sizeT)
     os.remove(fname)
 
 
@@ -52,8 +52,8 @@ def test_missing_obj():
         a = Decomposition(dat)
         a.perform_tfac()
         a.perform_PCA()
-        assert len(a.PCAR2X) == len(a.PCAsize)
-        assert len(a.TR2X) == len(a.Tsize)
+        assert len(a.PCAR2X) == len(a.sizePCA)
+        assert len(a.TR2X) == len(a.sizeT)
 
 
 def test_known_rank():
@@ -75,36 +75,37 @@ def create_missingness(tensor, drop):
         i, j, k = idxs[idx]
         tensor[i, j, k] = np.nan
 
+
 def test_impute_alter():
     test = Decomposition(alter().tensor)
-    test.Q2X_chord(drop=30, repeat=1)
-    assert max(test.chordQ2X[0]) >= .8
-    test.Q2X_entry(drop=9000,repeat=1)
+    test.Q2X_chord(drop=30, repeat=3)
+    assert max(test.chordQ2X) >= .8
+    test.Q2X_entry(drop=9000,repeat=3)
     assert len(test.entryQ2X) == len(test.entryQ2XPCA)
     assert len(test.entryQ2X[0]) == len(test.entryQ2XPCA[0])
-    assert max(test.entryQ2X[0]) >= .9
-    assert max(test.entryQ2XPCA[0]) >= .8
+    assert max(test.entryQ2X) >= .9
+    assert max(test.entryQ2XPCA) >= .8
 
 def test_impute_zohar():
     test = Decomposition(zohar().tensor)
-    test.Q2X_chord(drop=5, repeat=1)
+    test.Q2X_chord(drop=5, repeat=3)
     assert max(test.chordQ2X[0]) >= .4
-    test.Q2X_entry(drop=3000,repeat=1)
+    test.Q2X_entry(drop=3000,repeat=3)
     assert len(test.entryQ2X) == len(test.entryQ2XPCA)
     assert len(test.entryQ2X[0]) == len(test.entryQ2XPCA[0])
-    assert max(test.entryQ2X[0]) >= .6
-    assert max(test.entryQ2XPCA[0]) >= .4
+    assert max(test.entryQ2X) >= .55
+    assert max(test.entryQ2XPCA) >= .4
 
 def test_impute_random():
     shape = (10,10,10)
     test = Decomposition(tl.cp_to_tensor(random_cp(shape, 10)))
     test.Q2X_chord(drop=10, repeat=1)
-    assert max(test.chordQ2X[0]) >= .95
+    assert max(test.chordQ2X) >= .95
     test.Q2X_entry(drop=100, repeat=1)
     assert len(test.entryQ2X) == len(test.entryQ2XPCA)
     assert len(test.entryQ2X[0]) == len(test.entryQ2XPCA[0])
-    assert max(test.entryQ2X[0]) >= .95
-    assert max(test.entryQ2XPCA[0]) >= .8
+    assert max(test.entryQ2X) >= .95
+    assert max(test.entryQ2XPCA) >= .8
 
 def test_impute_noise_missing():
     shape = (10,10,10)
@@ -115,9 +116,9 @@ def test_impute_noise_missing():
 
     test = Decomposition(tensor_2)
     test.Q2X_chord(drop=10, repeat=1)
-    assert max(test.chordQ2X[0]) >= .95
+    assert max(test.chordQ2X) >= .95
     test.Q2X_entry(drop=100, repeat=1)
     assert len(test.entryQ2X) == len(test.entryQ2XPCA)
     assert len(test.entryQ2X[0]) == len(test.entryQ2XPCA[0])
-    assert max(test.entryQ2X[0]) >= .95
-    assert max(test.entryQ2XPCA[0]) >= .8
+    assert max(test.entryQ2X) >= .95
+    assert max(test.entryQ2XPCA) >= .8
