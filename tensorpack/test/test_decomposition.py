@@ -70,10 +70,9 @@ def test_known_rank():
 
 def create_missingness(tensor, drop):
     idxs = np.argwhere(np.isfinite(tensor))
-    ranidxs = np.random.choice(idxs.shape[0], drop, replace=False) 
-    for idx in ranidxs:
-        i, j, k = idxs[idx]
-        tensor[i, j, k] = np.nan
+    dropidxs = idxs[np.random.choice(idxs.shape[0], drop, replace=False)]
+    dropidxs = tuple(dropidxs.T)
+    tensor[dropidxs] = np.nan
 
 
 def test_impute_alter():
