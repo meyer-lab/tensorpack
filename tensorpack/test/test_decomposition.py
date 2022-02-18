@@ -83,7 +83,7 @@ def test_impute_alter():
     test.Q2X_entry(drop=9000,repeat=3)
     assert len(test.entryQ2X) == len(test.entryQ2XPCA)
     assert len(test.entryQ2X[0]) == len(test.entryQ2XPCA[0])
-    assert max(test.entryQ2X[0]) >= .9
+    assert max(test.entryQ2X[0]) >= .85
     assert max(test.entryQ2XPCA[0]) >= .8
 
 def test_impute_zohar():
