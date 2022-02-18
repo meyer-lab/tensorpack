@@ -1,9 +1,7 @@
 import pickle
 import numpy as np
-from numpy.linalg import norm
 from .cmtf import perform_CP, calcR2X
 from tensorly import partial_svd
-from .cmtf import perform_CP, calcR2X
 from .SVD_impute import IterativeSVD
 
 
@@ -32,56 +30,23 @@ class Decomposition():
         self.PCAR2X = [calcR2X(c, mIn=flatData) for c in recon]
         self.sizePCA = [sum(flatData.shape) * rr for rr in self.rrs]
 
-    def Q2X_chord(self, drop=5, repeat=5):
+    def Q2X_chord(self, drop=5, repeat=5, mode=0):
         Q2X = np.zeros((repeat,self.rrs[-1]))
         for x in range(repeat):
             missingCube = np.copy(self.data)
+            np.moveaxis(missingCube,mode,0)
             tImp = np.copy(self.data)
-            
-            if tImp.ndim == 4:
-                for _ in range(drop):
-                    removable = False
-                    while not removable:
-                        idxs = np.argwhere(np.isfinite(missingCube))
-                        i,j,k,l = idxs[np.random.choice(idxs.shape[0], 1)][0]
-                        selection = np.random.choice([0,1,2])
-                        if selection == 0:
-                            if np.sum(np.isfinite(missingCube[:, j, k, l])) > 1:
-                                missingCube[:, j, k, l] = np.nan
-                                removable = True
-                        elif selection == 1:
-                            if np.sum(np.isfinite(missingCube[i, :, k, l])) > 1:
-                                missingCube[i, :, k, l] = np.nan
-                                removable = True
-                        elif selection == 2:
-                            if np.sum(np.isfinite(missingCube[i, j, :, l])) > 1:
-                                missingCube[i, j, :, l] = np.nan
-                                removable = True
-                        elif selection == 3:
-                            if np.sum(np.isfinite(missingCube[i, j, k, :])) > 1:
-                                missingCube[i, j, k, :] = np.nan
-                                removable = True
+            np.moveaxis(tImp,mode,0)
+            chordlen = missingCube.shape[0]
+            for _ in range(drop):
+                idxs = np.argwhere(np.isfinite(tImp))
+                chordidx = np.delete(idxs[np.random.choice(idxs.shape[0], 1)][0],0,-1)
+                dropidxs = []
+                for i in range(chordlen):
+                    dropidxs.append(tuple(np.insert(chordidx,0,i).T))
+                for i in range(chordlen):
+                    missingCube[dropidxs[i]] = np.nan
 
-            elif tImp.ndim == 3:
-                for _ in range(drop):
-                    removable = False
-                    while not removable:
-                        idxs = np.argwhere(np.isfinite(missingCube))
-                        i, j, k = idxs[np.random.choice(idxs.shape[0], 1)][0]
-                        selection = np.random.choice([0,1,2])
-                        if selection == 0:
-                            if np.sum(np.isfinite(missingCube[:, j, k])) > 1:
-                                missingCube[:, j, k] = np.nan
-                                removable = True
-                        elif selection == 1:
-                            if np.sum(np.isfinite(missingCube[i, :, k])) > 1:
-                                missingCube[i, :, k] = np.nan
-                                removable = True
-                        elif selection == 2:
-                            if np.sum(np.isfinite(missingCube[i, j, :])) > 1:
-                                missingCube[i, j, :] = np.nan
-                                removable = True
-            
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:
                 tFac = self.method(missingCube, r=rr)
@@ -98,40 +63,27 @@ class Decomposition():
             idxs = np.argwhere(np.isfinite(tImp))
             
             # finds values that must be kept and only allow dropped values from the remaining data
-            modeidxs = np.zeros((tImp.ndim,max(tImp.shape)))
+            midxs = np.zeros((tImp.ndim,max(tImp.shape)))
             for i in range(tImp.ndim):
-                modeidxs[i] = [1 for n in range(tImp.shape[i])] + [0 for m in range(len(modeidxs[i])-tImp.shape[i])]
-            
-            if tImp.ndim == 4:
-                while np.sum(modeidxs) > 0:
-                    ranmidx = np.random.choice(idxs.shape[0], 1) 
-                    i,j,k,l = idxs[ranmidx][0]
-                    if modeidxs[0,i] > 0 or modeidxs[1,j] > 0 or modeidxs[2,k] > 0 or  modeidxs[3,l] > 0:
-                        modeidxs[0,i] = 0
-                        modeidxs[1,j] = 0
-                        modeidxs[2,k] = 0
-                        modeidxs[3,l] = 0
-                        np.delete(idxs, ranmidx, axis=0)
-                assert idxs.shape[0] >= drop
-                ranidxs = np.random.choice(idxs.shape[0], drop, replace=False)
-                for idx in ranidxs:
-                    i,j,k,l = idxs[idx]
-                    missingCube[i,j,k,l] = np.nan
+                midxs[i] = [1 for n in range(tImp.shape[i])] + [0 for m in range(len(midxs[i])-tImp.shape[i])]
+            modecounter = np.arange(tImp.ndim)
+            while np.sum(midxs) > 0:
+                removable=False
+                ran = np.random.choice(idxs.shape[0], 1) 
+                ranidx = idxs[ran][0]
+                counter = 0
+                for i in ranidx:
+                    if midxs[modecounter[counter],i] > 0:
+                        removable = True
+                    midxs[modecounter[counter],i] = 0
+                    counter += 1
+                if removable == True:
+                    idxs = np.delete(idxs, ran, axis=0)
+            assert idxs.shape[0] >= drop
 
-            elif tImp.ndim == 3:
-                while np.sum(modeidxs) > 0:
-                    ranmidx = np.random.choice(idxs.shape[0], 1) 
-                    i,j,k = idxs[ranmidx][0]
-                    if modeidxs[0,i] > 0 or modeidxs[1,j] > 0 or modeidxs[2,k] > 0:
-                        modeidxs[0,i] = 0
-                        modeidxs[1,j] = 0
-                        modeidxs[2,k] = 0
-                        np.delete(idxs, ranmidx, axis=0)
-                assert idxs.shape[0] >= drop
-                ranidxs = np.random.choice(idxs.shape[0], drop, replace=False)
-                for idx in ranidxs:
-                    i,j,k = idxs[idx]
-                    missingCube[i,j,k] = np.nan
+            dropidxs = idxs[np.random.choice(idxs.shape[0], drop, replace=False)]
+            dropidxs = tuple(dropidxs.T)
+            missingCube[dropidxs] = np.nan
 
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:
