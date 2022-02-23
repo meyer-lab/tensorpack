@@ -76,7 +76,7 @@ def chord_drop(tensor, drop):
     None : tensor is modified with missing chords
     """
     
-    # Drop chords based on random values
+    # Drop chords based on random idxs
     chordlen = tensor.shape[0]
     for _ in range(drop):
         idxs = np.argwhere(np.isfinite(tensor))
