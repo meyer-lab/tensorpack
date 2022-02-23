@@ -68,13 +68,6 @@ def test_known_rank():
     assert newtFac[-1] < 1.0
 
 
-def create_missingness(tensor, drop):
-    idxs = np.argwhere(np.isfinite(tensor))
-    dropidxs = idxs[np.random.choice(idxs.shape[0], drop, replace=False)]
-    dropidxs = tuple(dropidxs.T)
-    tensor[dropidxs] = np.nan
-
-
 def test_impute_alter():
     test = Decomposition(alter().tensor)
     test.Q2X_chord(drop=30, repeat=1)
