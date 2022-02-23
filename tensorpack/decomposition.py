@@ -5,12 +5,40 @@ from tensorly import partial_svd
 from .SVD_impute import IterativeSVD
 
 
+def create_missingness(tensor, drop):
+    """
+    Creates missingness for a full tensor.
+    """
+    idxs = np.argwhere(np.isfinite(tensor))
+    dropidxs = idxs[np.random.choice(idxs.shape[0], drop, replace=False)]
+    dropidxs = tuple(dropidxs.T)
+    tensor[dropidxs] = np.nan
+
+
 def entry_drop(tensor, drop):
+    """
+    Drops random values within a tensor. Finds a bare minimum cube before dropping values to ensure PCA remains viable.
+
+    Parameters
+    ----------
+    tensor : ndarray
+        Takes a tensor of any shape. Preference for at least two values present per chord.
+    drop : int
+        To set a percentage, use np.sum(np.isfinite(tensor)) and multiply by the percentage
+        to find the relevant drop value, rounding to nearest int.
+
+    Returns
+    -------
+    None : tensor is modified with missing values
+    """
+
+    # Track chords for each mode to ensure bare minimum cube covers each chord at least once
     midxs = np.zeros((tensor.ndim,max(tensor.shape)))
     for i in range(tensor.ndim):
         midxs[i] = [1 for n in range(tensor.shape[i])] + [0 for m in range(len(midxs[i])-tensor.shape[i])]
     modecounter = np.arange(tensor.ndim)
 
+    # Remove bare minimum cube idxs from droppable values
     idxs = np.argwhere(np.isfinite(tensor))
     while np.sum(midxs) > 0:
         removable = False
@@ -32,8 +60,24 @@ def entry_drop(tensor, drop):
 
 
 def chord_drop(tensor, drop):
-    chordlen = tensor.shape[0]
+    """
+    Removes chords along axis = 0 of a tensor.
+
+    Parameters
+    ----------
+    tensor : ndarray
+        Takes a tensor of any shape.
+    drop : int
+        To set a percentage, use np.sum(tensor.ndim[0]) and multiply by the percentage 
+        to find the relevant drop value, rounding to nearest int.
+
+    Returns
+    -------
+    None : tensor is modified with missing chords
+    """
     
+    # Drop chords based on random values
+    chordlen = tensor.shape[0]
     for _ in range(drop):
         idxs = np.argwhere(np.isfinite(tensor))
         chordidx = np.delete(idxs[np.random.choice(idxs.shape[0], 1)][0],0,-1)
@@ -70,6 +114,28 @@ class Decomposition():
         self.sizePCA = [sum(flatData.shape) * rr for rr in self.rrs]
 
     def Q2X_chord(self, drop=5, repeat=5, mode=0):
+        """
+        Calculates Q2X when dropping chords along axis = mode for the data using self.method for factor decomposition,
+        comparing each component. Designed for creating graphs.
+
+        Parameters
+        ----------
+        drop : int
+            To set a percentage, use np.sum(tensor.ndim[0]) and multiply by the percentage 
+            to find the relevant drop value, rounding to nearest int.
+        repeat : int
+        mode : int
+            Defaults to mode corresponding to axis = 0. Can be set to any mode of the tensor.
+
+        Returns
+        -------
+        self.Q2X : ndarray of size (repeat, max_rr)
+            Each value in a row represents the Q2X of the tensor calculated for components 1 to max_rr.
+            Each row represents a single repetition.
+        
+        Drops in Q2X from one component to the next may signify overfitting.
+        """
+
         Q2X = np.zeros((repeat,self.rrs[-1]))
 
         for x in range(repeat):
@@ -79,6 +145,7 @@ class Decomposition():
             np.moveaxis(tImp,mode,0)
             chord_drop(missingCube, drop)
 
+            # Calculate Q2X for each number of components
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:
                 tFac = self.method(missingCube, r=rr)
@@ -87,6 +154,32 @@ class Decomposition():
         self.chordQ2X = Q2X
 
     def Q2X_entry(self, drop=20, repeat=5, comparePCA=True):
+        """
+        Calculates Q2X when dropping chords along axis = mode for the data using self.method for factor decomposition,
+        comparing each component. Designed for creating graphs.
+
+        Parameters
+        ----------
+        drop : int
+            To set a percentage, use np.sum(tensor.ndim[0]) and multiply by the percentage 
+            to find the relevant drop value, rounding to nearest int.
+        repeat : int
+        comparePCA : boolean
+            Defaulted to calculate Q2X for respective principal components using PCA for factorization
+            to compare against self.method.
+
+        Returns
+        -------
+        self.Q2X : ndarray of size (repeat, max_rr)
+            Each value in a row represents the Q2X of the tensor calculated for components 1 to max_rr using self.method.
+            Each row represents a single repetition.
+        self.Q2XPCA : ndarray of size (repeat, max_rr)
+            Each value in a row represents the Q2X of the tensor calculated for components 1 to max_rr using PCA after
+            SVD imputation. Each row represents a single repetition.
+        
+        Drops in Q2X from one component to the next may signify overfitting.
+        """
+
         Q2X = np.zeros((repeat,self.rrs[-1]))
         Q2XPCA = np.zeros((repeat,self.rrs[-1]))
         
@@ -95,11 +188,13 @@ class Decomposition():
             tImp = np.copy(self.data)
             entry_drop(missingCube, drop)
 
+            # Calculate Q2X for each number of components
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:
                 tFac = self.method(missingCube, r=rr)
                 Q2X[x,rr-1] = calcR2X(tFac, tIn=tImp)
             
+            # Calculate Q2X for each number of principal components using PCA for factorization as comparison
             if comparePCA:
                 si = IterativeSVD(rank=max(self.rrs), random_state=1)
                 missingMat = np.reshape(np.moveaxis(missingCube, 0, 0), (missingCube.shape[0], -1))
