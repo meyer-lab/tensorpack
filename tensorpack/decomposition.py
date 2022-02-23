@@ -5,6 +5,47 @@ from tensorly import partial_svd
 from .SVD_impute import IterativeSVD
 
 
+def entry_drop(tensor, drop):
+    tOrig = np.copy(tensor)
+    midxs = np.zeros((tOrig.ndim,max(tOrig.shape)))
+    for i in range(tOrig.ndim):
+        midxs[i] = [1 for n in range(tOrig.shape[i])] + [0 for m in range(len(midxs[i])-tOrig.shape[i])]
+    modecounter = np.arange(tOrig.ndim)
+
+    idxs = np.argwhere(np.isfinite(tOrig))
+    while np.sum(midxs) > 0:
+        removable = False
+        ran = np.random.choice(idxs.shape[0], 1) 
+        ranidx = idxs[ran][0]
+        counter = 0
+        for i in ranidx:
+            if midxs[modecounter[counter],i] > 0:
+                removable = True
+            midxs[modecounter[counter],i] = 0
+            counter += 1
+        if removable == True:
+            idxs = np.delete(idxs, ran, axis=0)
+    assert idxs.shape[0] >= drop
+    
+    dropidxs = idxs[np.random.choice(idxs.shape[0], drop, replace=False)]
+    dropidxs = tuple(dropidxs.T)
+    tensor[dropidxs] = np.nan
+
+
+def chord_drop(tensor, drop):
+    tOrig = np.copy(tensor)
+    chordlen = tensor.shape[0]
+    
+    for _ in range(drop):
+        idxs = np.argwhere(np.isfinite(tOrig))
+        chordidx = np.delete(idxs[np.random.choice(idxs.shape[0], 1)][0],0,-1)
+        dropidxs = []
+        for i in range(chordlen):
+            dropidxs.append(tuple(np.insert(chordidx,0,i).T))
+        for i in range(chordlen):
+            tensor[dropidxs[i]] = np.nan
+
+
 class Decomposition():
     def __init__(self, data, max_rr=5, method=perform_CP):
         self.data = data
@@ -32,58 +73,29 @@ class Decomposition():
 
     def Q2X_chord(self, drop=5, repeat=5, mode=0):
         Q2X = np.zeros((repeat,self.rrs[-1]))
+
         for x in range(repeat):
             missingCube = np.copy(self.data)
             np.moveaxis(missingCube,mode,0)
             tImp = np.copy(self.data)
             np.moveaxis(tImp,mode,0)
-            chordlen = missingCube.shape[0]
-            for _ in range(drop):
-                idxs = np.argwhere(np.isfinite(tImp))
-                chordidx = np.delete(idxs[np.random.choice(idxs.shape[0], 1)][0],0,-1)
-                dropidxs = []
-                for i in range(chordlen):
-                    dropidxs.append(tuple(np.insert(chordidx,0,i).T))
-                for i in range(chordlen):
-                    missingCube[dropidxs[i]] = np.nan
+            chord_drop(missingCube, drop)
 
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:
                 tFac = self.method(missingCube, r=rr)
                 Q2X[x,rr-1] = calcR2X(tFac, tIn=tImp)
-                
+
         self.chordQ2X = Q2X
 
     def Q2X_entry(self, drop=20, repeat=5, comparePCA=True):
         Q2X = np.zeros((repeat,self.rrs[-1]))
         Q2XPCA = np.zeros((repeat,self.rrs[-1]))
+        
         for x in range(repeat):
             missingCube = np.copy(self.data)
             tImp = np.copy(self.data)
-            idxs = np.argwhere(np.isfinite(tImp))
-            
-            # finds values that must be kept and only allow dropped values from the remaining data
-            midxs = np.zeros((tImp.ndim,max(tImp.shape)))
-            for i in range(tImp.ndim):
-                midxs[i] = [1 for n in range(tImp.shape[i])] + [0 for m in range(len(midxs[i])-tImp.shape[i])]
-            modecounter = np.arange(tImp.ndim)
-            while np.sum(midxs) > 0:
-                removable=False
-                ran = np.random.choice(idxs.shape[0], 1) 
-                ranidx = idxs[ran][0]
-                counter = 0
-                for i in ranidx:
-                    if midxs[modecounter[counter],i] > 0:
-                        removable = True
-                    midxs[modecounter[counter],i] = 0
-                    counter += 1
-                if removable == True:
-                    idxs = np.delete(idxs, ran, axis=0)
-            assert idxs.shape[0] >= drop
-
-            dropidxs = idxs[np.random.choice(idxs.shape[0], drop, replace=False)]
-            dropidxs = tuple(dropidxs.T)
-            missingCube[dropidxs] = np.nan
+            entry_drop(missingCube, drop)
 
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:
