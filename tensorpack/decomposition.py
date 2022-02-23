@@ -6,13 +6,12 @@ from .SVD_impute import IterativeSVD
 
 
 def entry_drop(tensor, drop):
-    tOrig = np.copy(tensor)
-    midxs = np.zeros((tOrig.ndim,max(tOrig.shape)))
-    for i in range(tOrig.ndim):
-        midxs[i] = [1 for n in range(tOrig.shape[i])] + [0 for m in range(len(midxs[i])-tOrig.shape[i])]
-    modecounter = np.arange(tOrig.ndim)
+    midxs = np.zeros((tensor.ndim,max(tensor.shape)))
+    for i in range(tensor.ndim):
+        midxs[i] = [1 for n in range(tensor.shape[i])] + [0 for m in range(len(midxs[i])-tensor.shape[i])]
+    modecounter = np.arange(tensor.ndim)
 
-    idxs = np.argwhere(np.isfinite(tOrig))
+    idxs = np.argwhere(np.isfinite(tensor))
     while np.sum(midxs) > 0:
         removable = False
         ran = np.random.choice(idxs.shape[0], 1) 
@@ -33,11 +32,10 @@ def entry_drop(tensor, drop):
 
 
 def chord_drop(tensor, drop):
-    tOrig = np.copy(tensor)
     chordlen = tensor.shape[0]
     
     for _ in range(drop):
-        idxs = np.argwhere(np.isfinite(tOrig))
+        idxs = np.argwhere(np.isfinite(tensor))
         chordidx = np.delete(idxs[np.random.choice(idxs.shape[0], 1)][0],0,-1)
         dropidxs = []
         for i in range(chordlen):
