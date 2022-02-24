@@ -29,9 +29,8 @@ def entry_drop(tensor, drop):
 
     Returns
     -------
-    None : tensor is modified with missing values
+    None : tensor is modified with missing values.
     """
-
     # Track chords for each mode to ensure bare minimum cube covers each chord at least once
     midxs = np.zeros((tensor.ndim,max(tensor.shape)))
     for i in range(tensor.ndim):
@@ -73,9 +72,8 @@ def chord_drop(tensor, drop):
 
     Returns
     -------
-    None : tensor is modified with missing chords
+    None : tensor is modified with missing chords.
     """
-    
     # Drop chords based on random idxs
     chordlen = tensor.shape[0]
     for _ in range(drop):
@@ -90,6 +88,18 @@ def chord_drop(tensor, drop):
 
 class Decomposition():
     def __init__(self, data, max_rr=5, method=perform_CP):
+        """
+        Decomposition object designed for plotting.
+
+        Parameters
+        ----------
+        data : ndarray
+            Takes a tensor of any shape.
+        max_rr : int
+            Defines the maximum component to consider during factorization.
+        method : function
+            Takes a factorization method. Default set to perform_CP() from cmtf.py
+        """
         self.data = data
         self.method = method
         self.rrs = np.arange(1,max_rr+1)
@@ -116,7 +126,7 @@ class Decomposition():
     def Q2X_chord(self, drop=5, repeat=5, mode=0):
         """
         Calculates Q2X when dropping chords along axis = mode for the data using self.method for factor decomposition,
-        comparing each component. Designed for creating graphs.
+        comparing each component. Drops in Q2X from one component to the next may signify overfitting.
 
         Parameters
         ----------
@@ -132,10 +142,7 @@ class Decomposition():
         self.Q2X : ndarray of size (repeat, max_rr)
             Each value in a row represents the Q2X of the tensor calculated for components 1 to max_rr.
             Each row represents a single repetition.
-        
-        Drops in Q2X from one component to the next may signify overfitting.
         """
-
         Q2X = np.zeros((repeat,self.rrs[-1]))
 
         for x in range(repeat):
@@ -156,7 +163,7 @@ class Decomposition():
     def Q2X_entry(self, drop=20, repeat=5, comparePCA=True):
         """
         Calculates Q2X when dropping chords along axis = mode for the data using self.method for factor decomposition,
-        comparing each component. Designed for creating graphs.
+        comparing each component. Drops in Q2X from one component to the next may signify overfitting.
 
         Parameters
         ----------
@@ -176,10 +183,7 @@ class Decomposition():
         self.Q2XPCA : ndarray of size (repeat, max_rr)
             Each value in a row represents the Q2X of the tensor calculated for components 1 to max_rr using PCA after
             SVD imputation. Each row represents a single repetition.
-        
-        Drops in Q2X from one component to the next may signify overfitting.
         """
-
         Q2X = np.zeros((repeat,self.rrs[-1]))
         Q2XPCA = np.zeros((repeat,self.rrs[-1]))
         
