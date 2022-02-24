@@ -7,7 +7,7 @@ from timeit import repeat
 import numpy as np
 import tensorly as tl
 from tensorly.random import random_cp
-from ..decomposition import Decomposition
+from ..decomposition import Decomposition, create_missingness
 from ..cmtf import perform_CP, calcR2X
 from tensordata.atyeo import data as atyeo
 from tensordata.alter import data as alter
