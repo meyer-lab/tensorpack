@@ -69,6 +69,7 @@ def test_known_rank():
 
 
 def test_impute_alter():
+    np.random.seed(5)
     test = Decomposition(alter().tensor)
     test.Q2X_chord(drop=30, repeat=1)
     assert max(test.chordQ2X[0]) >= .8
@@ -79,6 +80,7 @@ def test_impute_alter():
     assert max(test.entryQ2XPCA[0]) >= .8
 
 def test_impute_zohar():
+    np.random.seed(5)
     test = Decomposition(zohar().tensor)
     test.Q2X_chord(drop=5, repeat=1)
     assert max(test.chordQ2X[0]) >= .4
@@ -89,6 +91,7 @@ def test_impute_zohar():
     assert max(test.entryQ2XPCA[0]) >= .4
 
 def test_impute_random():
+    np.random.seed(5)
     shape = (10,10,10)
     test = Decomposition(tl.cp_to_tensor(random_cp(shape, 10)))
     test.Q2X_chord(drop=10, repeat=1)
@@ -100,6 +103,7 @@ def test_impute_random():
     assert max(test.entryQ2XPCA[0]) >= .8
 
 def test_impute_noise_missing():
+    np.random.seed(5)
     shape = (10,10,10)
     tensor = tl.cp_to_tensor(random_cp(shape, 10))
     create_missingness(tensor,300)
