@@ -123,7 +123,7 @@ class Decomposition():
         self.PCAR2X = [calcR2X(c, mIn=flatData) for c in recon]
         self.sizePCA = [sum(flatData.shape) * rr for rr in self.rrs]
 
-    def Q2X_chord(self, drop=5, repeat=5, mode=0):
+    def Q2X_chord(self, drop=5, repeat=3, mode=0):
         """
         Calculates Q2X when dropping chords along axis = mode for the data using self.method for factor decomposition,
         comparing each component. Drops in Q2X from one component to the next may signify overfitting.
@@ -160,7 +160,7 @@ class Decomposition():
 
         self.chordQ2X = Q2X
 
-    def Q2X_entry(self, drop=20, repeat=5, comparePCA=True):
+    def Q2X_entry(self, drop=20, repeat=3, comparePCA=True):
         """
         Calculates Q2X when dropping chords along axis = mode for the data using self.method for factor decomposition,
         comparing each component. Drops in Q2X from one component to the next may signify overfitting.
