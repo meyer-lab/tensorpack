@@ -8,7 +8,7 @@ from matplotlib.ticker import ScalarFormatter
 from .decomposition import Decomposition
 
 
-def tfacr2x(ax, pos, decomp:Decomposition):
+def tfacr2x(ax, pos = 0, decomp:Decomposition):
     """
     Plots R2X for tensor factorizations for all components up to decomp.max_rr.
 
@@ -32,7 +32,7 @@ def tfacr2x(ax, pos, decomp:Decomposition):
     ax[pos].set_xlim(0.5, np.amax(comps) + 0.5)
 
 
-def reduction(ax, pos, decomp:Decomposition):
+def reduction(ax, pos = 0, decomp):
     """
     Plots size reduction for tensor factorization versus PCA for all components up to decomp.max_rr.
 
@@ -57,7 +57,7 @@ def reduction(ax, pos, decomp:Decomposition):
     ax[pos].legend()
 
 
-def q2xchord(ax, pos, decomp:Decomposition):
+def q2xchord(ax, pos = 0, decomp):
     """
     Plots Q2X for tensor factorization when removing chords from a single mode for all components up to decomp.max_rr.
     Requires multiple runs to generate error bars.
@@ -89,7 +89,7 @@ def q2xchord(ax, pos, decomp:Decomposition):
     ax[pos].set_ylim(bottom=0.0, top=1.0)
 
 
-def q2xentry(ax, pos, decomp:Decomposition, methodname = "CP"):
+def q2xentry(ax, decomp, pos = 0, methodname = "CP"):
     """
     Plots Q2X for tensor factorization versus PCA when removing entries for all components up to decomp.max_rr.
     Requires multiple runs to generate error bars.
@@ -132,6 +132,6 @@ def q2xentry(ax, pos, decomp:Decomposition, methodname = "CP"):
     ax[pos].legend(loc=4)
 
 
-def plot_weights(ax, pos, decomp:Decomposition):
+def plot_weights(ax, pos, decomp):
     # figure 5 in MSB
     pass
