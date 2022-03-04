@@ -3,7 +3,6 @@ Testing Decomposition
 """
 
 import os
-from timeit import repeat
 import numpy as np
 import tensorly as tl
 from tensorly.random import random_cp
