@@ -1,5 +1,5 @@
 """
-This file makes all standard plots for tensor analysis
+This file makes all standard plots for tensor analysis. Requires a Decomposition object after running relevant values.
 """
 
 import numpy as np
@@ -8,9 +8,18 @@ from matplotlib.ticker import ScalarFormatter
 from .decomposition import Decomposition
 
 
-def tfacr2x(ax, pos, decomp: Decomposition):
+def tfacr2x(ax, pos, decomp:Decomposition):
     """
-    Plot R2X of tensor decomp with more components
+    Plots R2X for tensor factorizations for all components up to decomp.max_rr.
+
+    Parameters
+    ----------
+    ax : list of axis objects
+        Plot information for subplots of figure f. See getSetup() in tensorpack.test.common.py for more detail.
+    pos : int
+        Defines position of subplot within figure f.
+    decomp : Decomposition
+        Takes a Decomposition object that has successfully run decomp.perform_tfac().
     """
     comps = decomp.rrs
     ax[pos].scatter(comps, decomp.TR2X, s=10)
@@ -23,9 +32,18 @@ def tfacr2x(ax, pos, decomp: Decomposition):
     ax[pos].set_xlim(0.5, np.amax(comps) + 0.5)
 
 
-def reduction(ax, pos, decomp):
+def reduction(ax, pos, decomp:Decomposition):
     """
-    Plot the reduced dataset size vs. (1-R2X), TFac vs. PCA
+    Plots size reduction for tensor factorization versus PCA for all components up to decomp.max_rr.
+
+    Parameters
+    ----------
+    ax : list of axis objects
+        Plot information for subplots of figure f. See getSetup() in tensorpack.test.common.py for more detail.
+    pos : int
+        Defines position of subplot within figure f.
+    decomp : Decomposition
+        Takes a Decomposition object that has successfully run decomp.perform_tfac() and decomp.perform_PCA().
     """
     CPR2X, PCAR2X, sizeTfac, sizePCA = np.asarray(decomp.TR2X), np.asarray(decomp.PCAR2X), decomp.sizeT, decomp.sizePCA
     ax[pos].set_xscale("log", base=2)
@@ -39,7 +57,20 @@ def reduction(ax, pos, decomp):
     ax[pos].legend()
 
 
-def q2xchord(ax, pos, decomp):
+def q2xchord(ax, pos, decomp:Decomposition):
+    """
+    Plots Q2X for tensor factorization when removing chords from a single mode for all components up to decomp.max_rr.
+    Requires multiple runs to generate error bars.
+
+    Parameters
+    ----------
+    ax : list of axis objects
+        Plot information for subplots of figure f. See getSetup() in tensorpack.test.common.py for more detail.
+    pos : int
+        Defines position of subplot within figure f.
+    decomp : Decomposition
+        Takes a Decomposition object that has successfully run decomp.Q2X_chord().
+    """
     chords_df = decomp.chordQ2X
     comps = decomp.rrs
     chords_df = pd.DataFrame(decomp.chordQ2X).T
@@ -58,7 +89,22 @@ def q2xchord(ax, pos, decomp):
     ax[pos].set_ylim(bottom=0.0, top=1.0)
 
 
-def q2xentry(ax, pos, decomp, methodname = "CP"):
+def q2xentry(ax, pos, decomp:Decomposition, methodname = "CP"):
+    """
+    Plots Q2X for tensor factorization versus PCA when removing entries for all components up to decomp.max_rr.
+    Requires multiple runs to generate error bars.
+
+    Parameters
+    ----------
+    ax : list of axis objects
+        Plot information for subplots of figure f. See getSetup() in tensorpack.test.common.py for more detail.
+    pos : int
+        Defines position of subplot within figure f.
+    decomp : Decomposition
+        Takes a Decomposition object that has successfully run decomp.entry().
+    methodname : str
+        Allows for proper tensor method when naming graph axes. 
+    """
     entry_df = pd.DataFrame(decomp.entryQ2X).T
     entrypca_df = pd.DataFrame(decomp.entryQ2XPCA).T
     comps = decomp.rrs
@@ -86,6 +132,6 @@ def q2xentry(ax, pos, decomp, methodname = "CP"):
     ax[pos].legend(loc=4)
 
 
-def plot_weights(decomp):
+def plot_weights(ax, pos, decomp:Decomposition):
     # figure 5 in MSB
     pass
