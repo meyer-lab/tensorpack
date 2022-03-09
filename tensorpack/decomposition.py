@@ -125,7 +125,7 @@ class Decomposition():
 
     def Q2X_chord(self, drop=5, repeat=3, mode=0):
         """
-        Calculates Q2X when dropping chords along axis = mode for the data using self.method for factor decomposition,
+        Calculates Q2X when dropping chords along axis = mode from the data using self.method for factor decomposition,
         comparing each component. Drops in Q2X from one component to the next may signify overfitting.
 
         Parameters
@@ -162,7 +162,7 @@ class Decomposition():
 
     def Q2X_entry(self, drop=20, repeat=3, comparePCA=True):
         """
-        Calculates Q2X when dropping chords along axis = mode for the data using self.method for factor decomposition,
+        Calculates Q2X when dropping entries from the data using self.method for factor decomposition,
         comparing each component. Drops in Q2X from one component to the next may signify overfitting.
 
         Parameters
