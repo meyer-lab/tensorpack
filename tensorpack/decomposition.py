@@ -131,7 +131,7 @@ class Decomposition():
         Parameters
         ----------
         drop : int
-            To set a percentage, use np.sum(tensor.ndim[0]) and multiply by the percentage 
+            To set a percentage, use np.sum(tensor.ndim[mode]) and multiply by the percentage 
             to find the relevant drop value, rounding to nearest int.
         repeat : int
         mode : int
