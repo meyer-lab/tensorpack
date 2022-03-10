@@ -67,7 +67,7 @@ def chord_drop(tensor, drop):
     tensor : ndarray
         Takes a tensor of any shape.
     drop : int
-        To set a percentage, multiply np.sum(tensor.ndim[0]) by the percentage 
+        To set a percentage, multiply tensor.shape[0] by the percentage 
         to find the relevant drop value, rounding to nearest int.
 
     Returns
@@ -131,7 +131,7 @@ class Decomposition():
         Parameters
         ----------
         drop : int
-            To set a percentage, use np.sum(tensor.ndim[mode]) and multiply by the percentage 
+            To set a percentage, tensor.shape[mode] and multiply by the percentage 
             to find the relevant drop value, rounding to nearest int.
         repeat : int
         mode : int
