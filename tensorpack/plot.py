@@ -74,9 +74,9 @@ def q2xchord(ax, decomp):
 
     Q2Xchord = chords_df['mean']
     Q2Xerrors = chords_df['sem']
-    ax.scatter(comps, Q2Xchord, s=10)
-    ax.errorbar(comps, Q2Xchord, yerr=Q2Xerrors, fmt='none')
-    ax.set_ylabel("Q2X of Imputation")
+    ax.scatter(comps - 0.1, Q2Xchord, s=10)
+    ax.errorbar(comps + 0.1, Q2Xchord, yerr=Q2Xerrors, fmt='none')
+    ax.set_ylabel("Q2X of Chord Imputation")
     ax.set_xlabel("Number of Components")
     ax.set_xticks([x for x in comps])
     ax.set_xticklabels([x for x in comps])
@@ -112,11 +112,11 @@ def q2xentry(ax, decomp, methodname = "CP"):
     TErr = entry_df['sem']
     PCAR2X = entrypca_df['mean']
     PCAErr = entrypca_df['sem']
-    ax.plot(comps - 0.01, TR2X, ".", label=methodname)
-    ax.plot(comps + 0.01, PCAR2X, ".", label="PCA")
-    ax.errorbar(comps - 0.01, TR2X, yerr=TErr, fmt='none', ecolor='b')
-    ax.errorbar(comps + 0.01, PCAR2X, yerr=PCAErr, fmt='none', ecolor='darkorange')
-    ax.set_ylabel("Q2X of Imputation")
+    ax.plot(comps - 0.1, TR2X, ".", label=methodname)
+    ax.plot(comps + 0.1, PCAR2X, ".", label="PCA")
+    ax.errorbar(comps - 0.1, TR2X, yerr=TErr, fmt='none', ecolor='b')
+    ax.errorbar(comps + 0.1, PCAR2X, yerr=PCAErr, fmt='none', ecolor='darkorange')
+    ax.set_ylabel("Q2X of Entry Imputation")
     ax.set_xlabel("Number of Components")
     ax.set_xticks([x for x in comps])
     ax.set_xticklabels([x for x in comps])
