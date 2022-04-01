@@ -1,4 +1,5 @@
 import pickle
+from re import A
 import numpy as np
 from .cmtf import perform_CP, calcR2X
 from tensorly import partial_svd
@@ -53,9 +54,101 @@ def entry_drop(tensor, drop):
             idxs = np.delete(idxs, ran, axis=0)
     assert idxs.shape[0] >= drop
     
+    # Drop values
     dropidxs = idxs[np.random.choice(idxs.shape[0], drop, replace=False)]
-    dropidxs = tuple(dropidxs.T)
+    dropidxs = tuple(dropidxs)
     tensor[dropidxs] = np.nan
+
+
+def joint_entry_drop(tensor1, tensor2, drop):
+    "tensor1 MUST BE OF GREATER OR EQUAL DIMENSIONS THAN tensor2" 
+    
+    # Track chords for each mode to ensure bare minimum cube covers each chord at least once
+
+    midxs1 = np.zeros((tensor1.ndim,max(tensor1.shape)))
+    for i in range(tensor1.ndim):
+        midxs1[i] = [1 for n in range(tensor1.shape[i])] + [0 for m in range(len(midxs1[i])-tensor1.shape[i])]
+    modecounter1 = np.arange(tensor1.ndim)
+
+    midxs2 = np.zeros((tensor2.ndim,max(tensor2.shape)))
+    for i in range(tensor2.ndim):
+        midxs2[i] = [1 for n in range(tensor2.shape[i])] + [0 for m in range(len(midxs2[i])-tensor2.shape[i])]
+    modecounter2 = np.arange(tensor2.ndim)
+    
+
+    # Remove bare minimum cube idxs from droppable values
+    idxs1 = np.argwhere(np.isfinite(tensor1))
+    while np.sum(midxs1) > 0:
+        removable = False
+        ran = np.random.choice(idxs1.shape[0], 1) 
+        ranidx = idxs1[ran][0]
+        counter = 0
+        for i in ranidx:
+            if midxs1[modecounter1[counter],i] > 0:
+                removable = True
+            midxs1[modecounter1[counter],i] = 0
+            counter += 1
+        if removable == True:
+            idxs1 = np.delete(idxs1, ran, axis=0)
+
+    idxs2 = np.argwhere(np.isfinite(tensor2))
+    while np.sum(midxs2) > 0:
+        removable = False
+        ran = np.random.choice(idxs2.shape[0], 1) 
+        ranidx = idxs2[ran][0]
+        counter = 0
+        for i in ranidx:
+            if midxs2[modecounter2[counter],i] > 0:
+                removable = True
+            midxs2[modecounter2[counter],i] = 0
+            counter += 1
+        if removable == True:
+            idxs2 = np.delete(idxs2, ran, axis=0)
+    
+    # Combine droppable idxs
+    temp = np.hstack((np.full((idxs2.shape[0],1), 2), idxs2))
+    diff = idxs1.shape[1]-idxs2.shape[1]
+    for _ in range(diff):
+        temp = np.hstack((temp, np.full((temp.shape[0],1), 0)))
+    joint_idxs = np.vstack((np.hstack(np.full((idxs1.shape[0],1), 1), idxs1),temp))
+    assert joint_idxs.shape[0] >= drop
+    
+    # Select dropped idxs
+    dropidxs = joint_idxs[np.random.choice(joint_idxs.shape[0], drop, replace=False)]
+
+    # Separate dropped idxs and drop in corresponding tensors
+    tensor1_dropped, tensor2_dropped = 0,0
+    for i in range(dropidxs.shape[0]):
+        if dropidxs[i,0] == 1:
+            tensor1_dropped += 1
+        if dropidxs[i,0] == 2:
+            tensor2_dropped += 1
+    
+    
+    if tensor1_dropped > 0:
+        dropidxs1 = np.zeros((tensor1_dropped,dropidxs.shape[1]),dtype=int)
+        counter = 0 
+        for i in range(dropidxs.shape[0]):
+            if dropidxs[i,0] == 1:
+                dropidxs1[counter] = dropidxs[i]
+                counter += 1
+        dropidxs1 = np.delete(dropidxs1,0,1)
+        dropidxs1 = tuple(dropidxs1)
+        tensor1[dropidxs1] = np.nan
+
+    if tensor2_dropped > 0:
+        dropidxs2 = np.zeros((tensor2_dropped,dropidxs.shape[1]),dtype=int)
+        counter = 0 
+        for i in range(dropidxs.shape[0]):
+            if dropidxs[i,0] == 1:
+                dropidxs2[counter] = dropidxs[i]
+                counter += 1
+        dropidxs2 = np.delete(dropidxs2,0,1)
+        for i in diff:
+            dropidxs2 = np.delete(dropidxs2,-1,1)
+        
+        dropidxs2 = tuple(dropidxs2)
+        tensor2[dropidxs2] = np.nan
 
 
 def chord_drop(tensor, drop):
@@ -87,22 +180,32 @@ def chord_drop(tensor, drop):
 
 
 class Decomposition():
-    def __init__(self, data, max_rr=5, method=perform_CP):
+    def __init__(self, matrix, data=[0], max_rr=5, method=perform_CP):
         """
-        Decomposition object designed for plotting.
+        Decomposition object designed for plotting. Capable of handling a single tensor and matrix jointly.
 
         Parameters
         ----------
         data : ndarray
             Takes a tensor of any shape.
+        matrix : ndarray (optional)
+            Takes a matrix of any shape.
         max_rr : int
             Defines the maximum component to consider during factorization.
         method : function
             Takes a factorization method. Default set to perform_CP() from cmtf.py
         """
         self.data = data
+        self.matrix = matrix
         self.method = method
         self.rrs = np.arange(1,max_rr+1)
+        self.hasMatrix = False
+        if isinstance(matrix, np.ndarray):
+            assert matrix.ndim == 2
+            self.matrix = matrix
+            self.hasMatrix = True
+        else:
+            assert matrix == None
         pass
 
     def perform_tfac(self):
@@ -188,9 +291,17 @@ class Decomposition():
         Q2XPCA = np.zeros((repeat,self.rrs[-1]))
         
         for x in range(repeat):
-            missingCube = np.copy(self.data)
-            tImp = np.copy(self.data)
-            entry_drop(missingCube, drop)
+            if self.hasMatrix:
+                missingCube = np.copy(self.data)
+                missingMatrix = np.copy(self.matrix)
+                tImp = np.copy(self.data)
+                mImp = np.copy(self.matrix)
+                cmtf_entry_drop(missingCube, missingMatrix, drop)
+            else:
+                missingCube = np.copy(self.data)
+                tImp = np.copy(self.data)
+                entry_drop(missingCube, drop)
+                
 
             # Calculate Q2X for each number of components
             tImp[np.isfinite(missingCube)] = np.nan
