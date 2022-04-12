@@ -123,6 +123,10 @@ def q2xentry(ax, decomp, methodname = "CP"):
     ax.set_ylim(0, 1)
     ax.legend(loc=4)
 
+def tucker_expo(ax, decomp:Decomposition):
+    """ For Tucker exploration figure"""
+    
+    pass
 
 def plot_weights(ax, pos, decomp):
     # figure 5 in MSB

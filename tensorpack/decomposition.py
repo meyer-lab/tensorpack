@@ -203,6 +203,10 @@ class Decomposition():
         self.TR2X = [calcR2X(c, tIn=self.data) for c in self.tfac]
         self.sizeT = [rr * sum(self.tfac[0].shape) for rr in self.rrs]
 
+    def perform_tucker(self):
+        """ Try out Tucker for every combination of ranks """
+        pass
+
     def perform_PCA(self, flattenon=0):
         dataShape = self.data.shape
         flatData = np.reshape(np.moveaxis(self.data, flattenon, 0), (dataShape[flattenon], -1))
