@@ -4,7 +4,7 @@ import numpy as np
 from .cmtf import perform_CMTF, perform_CP, calcR2X
 from tensorly import partial_svd
 from .SVD_impute import IterativeSVD
-from .impute import entry_drop, joint_entry_drop, chord_drop
+from .impute import create_missingness, entry_drop, joint_entry_drop, chord_drop
 
 
 class Decomposition():

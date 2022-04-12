@@ -127,7 +127,32 @@ def q2xentry(ax, decomp, methodname = "CP"):
     ax.legend(loc=4)
 
 
-def plot_weights(ax, tensor, axes):
+def plot_weight_mode(ax, factor, labels, showylabel = True, title = ""):
+    """
+    Plots heatmaps for each input dimension by component.
+
+    Parameters
+     ----------
+    ax : axis object
+        Plot information for a subplot of figure f.
+    tensor : numpy ndarray
+        Takes a tensor to perform CP on.
+    axes : tuple of 3 lists
+        Allows for naming graph axes.
+    """
+    rank = np.shape(factor)[1]
+    components = [str(ii + 1) for ii in range(rank)]
+    facs = pd.DataFrame(factor, columns=[f"Cmp. {i}" for i in np.arange(1, rank + 1)], index=labels)
+
+    yticklabels = labels if showylabel else False
+    sns.heatmap(facs, cmap="PiYG", center=0, xticklabels=components, yticklabels=yticklabels, cbar=True, vmin=-1.0,
+                vmax=1.0, ax=ax)
+
+    ax.set_xlabel("Components")
+    ax.set_title(title)
+
+
+def plot_weights(ax, tfac, axes):
     """
     Plots heatmaps for each input dimension by component.
 
@@ -141,7 +166,6 @@ def plot_weights(ax, tensor, axes):
         Allows for naming graph axes. 
     """
     subjects, receptors, antigens = axes
-    tfac = perform_CP(tOrig=tensor)
 
     components =  [str(ii + 1) for ii in range(tfac.rank)]
 
@@ -153,6 +177,10 @@ def plot_weights(ax, tensor, axes):
     ax1 = plt.subplot(gs[0])
     ax2 = plt.subplot(gs[1])
     ax3 = plt.subplot(gs[2])
+
+    plot_weight_mode(ax1, tfac.factors[0], subjects, showylabel=False, title="Subjects")
+    plot_weight_mode(ax2, tfac.factors[1], receptors, showylabel=True, title="Subjects")
+    plot_weight_mode(ax3, tfac.factors[2], antigens, showylabel=True, title="Subjects")
 
     sns.heatmap(subs, cmap="PiYG", center=0, xticklabels=components, cbar=True, vmin=-1.0, vmax=1.0, ax=ax1)
     sns.heatmap(rec, cmap="PiYG", center=0, xticklabels=components, yticklabels=receptors, cbar=False, vmin=-1.0, vmax=1.0, ax=ax2)
