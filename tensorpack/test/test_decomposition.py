@@ -35,6 +35,7 @@ def test_decomp_obj():
     b.perform_tucker()
     assert len(a.PCAR2X) == len(a.sizePCA)
     assert len(a.TR2X) == len(a.sizeT)
+    assert len(b.TuckErr) == len(b.TuckRank)
 
     # test decomp save
     fname = "test_temp_atyeo.pkl"
