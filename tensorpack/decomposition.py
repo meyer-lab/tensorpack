@@ -207,7 +207,7 @@ class Decomposition():
 
     def perform_tucker(self):
         """ Try out Tucker for up to a specific number of ranks. """
-        self.Tucker, self.TuckErr, self.TuckRank = self.method(self.data, self.data.ndim * max(self.rrs)+1)
+        self.Tucker, self.TuckErr, self.TuckRank = perform_tucker(self.data, self.data.ndim * max(self.rrs)+1)
 
     def perform_PCA(self, flattenon=0):
         dataShape = self.data.shape
