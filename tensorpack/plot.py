@@ -123,8 +123,34 @@ def q2xentry(ax, decomp, methodname = "CP"):
     ax.set_ylim(0, 1)
     ax.legend(loc=4)
 
+
+def tucker_reduced_Dsize(tensor, ranks:list):
+    """ Output the error (1 - r2x) for each size of the data at each component # for tucker decomposition.
+    This forms the x-axis of the error vs. data size plot.
+    """
+    # if tensor is xarray...
+    if type(tensor) is not np.ndarray:
+        tensor = tensor.to_numpy()
+
+    sizes = []
+    for rank in ranks:
+        sum_comps = 0
+        for i in range(len(tensor.shape)):
+            sum_comps += rank[i] * tensor.shape[i]
+        sizes.append(sum_comps)
+
+    return sizes
+
 def tucker_expo(ax, decomp:Decomposition):
-    """ For Tucker exploration figure"""
+    """ Error versus data size for minimum error combination of rank from Tucker decomposition. """
+    decomp.perform_tucker()
+
+    sizes = tucker_reduced_Dsize(decomp.data, decomp.TuckRank)
+    ax.scatter(sizes, decomp.TuckErr)
+    ax.set_ylim((0.0, 1.0))
+    ax.set_title('Data reduction, Tucker')
+    ax.set_ylabel('Normalized Unexplained Variance')
+    ax.set_xlabel('Size of Reduced Data')
     
     pass
 

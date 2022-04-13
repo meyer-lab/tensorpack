@@ -4,6 +4,7 @@ import numpy as np
 from .cmtf import perform_CMTF, perform_CP, calcR2X
 from tensorly import partial_svd
 from .SVD_impute import IterativeSVD
+from .tucker import perform_tucker
 
 
 def create_missingness(tensor, drop):
@@ -187,6 +188,7 @@ class Decomposition():
             Defines the maximum component to consider during factorization.
         method : function
             Takes a factorization method. Default set to perform_CP() from cmtf.py
+            other methods include: perform_tucker
         """
         self.data = data
         self.method = method
@@ -204,8 +206,8 @@ class Decomposition():
         self.sizeT = [rr * sum(self.tfac[0].shape) for rr in self.rrs]
 
     def perform_tucker(self):
-        """ Try out Tucker for every combination of ranks """
-        pass
+        """ Try out Tucker for up to a specific number of ranks. """
+        self.Tucker, self.TuckErr, self.TuckRank = self.method(self.data, max_rr)
 
     def perform_PCA(self, flattenon=0):
         dataShape = self.data.shape
