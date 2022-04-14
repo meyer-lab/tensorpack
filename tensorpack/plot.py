@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.ticker import ScalarFormatter
 from .decomposition import Decomposition
+from tensorpack import perform_CP
 
 
 def tfacr2x(ax, decomp:Decomposition):
@@ -165,7 +166,28 @@ def tucker_expo(ax, decomp:Decomposition):
     ax.set_ylabel('Normalized Unexplained Variance')
     ax.set_xlabel('Size of Reduced Data')
 
+def plot_weight_mode(ax, factor, labels=False, title = ""):
+    """
+    Plots heatmaps for a single mode factors.
 
-def plot_weights(ax, pos, decomp):
-    # figure 5 in MSB
-    pass
+    Parameters
+     ----------
+    ax : axis object
+        Plot information for a subplot of figure f.
+    factor: numpy array
+        Factorized mode
+    labels: list of string or False
+        Labels for each of the elements
+    title" String
+        Figure title
+    """
+    rank = np.shape(factor)[1]
+    components = [str(ii + 1) for ii in range(rank)]
+    facs = pd.DataFrame(factor, columns=[f"Cmp. {i}" for i in np.arange(1, rank + 1)],
+                        index=labels if labels is not False else list(range(np.shape(factor)[0])))
+
+    sns.heatmap(facs, cmap="PiYG", center=0, xticklabels=components, yticklabels=labels, cbar=True, vmin=-1.0,
+                vmax=1.0, ax=ax)
+
+    ax.set_xlabel("Components")
+    ax.set_title(title)
