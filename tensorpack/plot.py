@@ -128,6 +128,18 @@ def q2xentry(ax, decomp, methodname = "CP"):
 def tucker_reduced_Dsize(tensor, ranks:list):
     """ Output the error (1 - r2x) for each size of the data at each component # for tucker decomposition.
     This forms the x-axis of the error vs. data size plot.
+
+    Parameters
+    ----------
+    tensor : xarray or numpy.ndarray
+        the multi-dimensional input data
+    ranks : list
+        the list of minimum-error Tucker fits for each component-combinations.
+
+    Returns
+    -------
+    sizes : list
+        the size of reduced data by Tucker for each error.
     """
     # if tensor is xarray...
     if type(tensor) is not np.ndarray:
@@ -142,8 +154,18 @@ def tucker_reduced_Dsize(tensor, ranks:list):
 
     return sizes
 
-def tucker_expo(ax, decomp:Decomposition):
-    """ Error versus data size for minimum error combination of rank from Tucker decomposition. """
+def tucker_reduction(ax, decomp:Decomposition):
+    """ Error versus data size for minimum error combination of rank from Tucker decomposition.
+    The error for those combinations that are the same dimensions, ie., for a 3-D tensor, [1, 1, 1], [2, 2, 2], etc
+    are shown by a different marker shape and color.
+    
+    Parameters
+    ----------
+    ax : axis object
+        Plot information for a subplot of figure f.
+    decomp : Decomposition
+        Takes a Decomposition object to run perform_tucker().
+    """
     decomp.perform_tucker()
     sizes = tucker_reduced_Dsize(decomp.data, decomp.TuckRank)
 
@@ -171,7 +193,7 @@ def plot_weight_mode(ax, factor, labels=False, title = ""):
     Plots heatmaps for a single mode factors.
 
     Parameters
-     ----------
+    ----------
     ax : axis object
         Plot information for a subplot of figure f.
     factor: numpy array
