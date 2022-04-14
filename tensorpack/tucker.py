@@ -53,4 +53,13 @@ def perform_tucker(tensor, num_comps: int):
         min_rank.append(ranks[err.index(min(err))])
         factors.append(fac[err.index(min(err))])
 
+
+    # check if specified ranks are already included in the calculations
+    specified_ranks = [[i] * tensor.ndim for i in range(1, num_comps+1)]
+    for ranks in specified_ranks:
+        if ranks not in min_rank:
+            factors.append(tucker(tensor, rank=ranks, svd='randomized_svd'))
+            min_err.append((tl.norm(tl.tucker_to_tensor(fac[-1]) - tensor) ** 2) / tl.norm(tensor) ** 2)
+            min_rank.append(ranks)
+
     return factors, min_err, min_rank
