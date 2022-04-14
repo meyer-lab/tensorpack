@@ -5,7 +5,7 @@ import numpy as np
 import itertools as it
 import tensorly as tl
 
-def perform_tucker(tensor, num_comps: int):
+def tucker_decomp(tensor, num_comps: int):
     """ Performs Tucker decomposition.
 
     Parameters
@@ -41,25 +41,29 @@ def perform_tucker(tensor, num_comps: int):
 
         fac = []
         err = []
+        rnk = []
         for indx, val in enumerate(ranks):
-            ranks[indx][indx] += 1
+            temp_rank = val.copy()
+            temp_rank[indx] = val[indx] + 1
 
             # calculate error for this rank combination
-            fac.append(tucker(tensor, rank=ranks[indx][indx], svd='randomized_svd'))
+            fac.append(tucker(tensor, rank=temp_rank, svd='randomized_svd'))
             err.append((tl.norm(tl.tucker_to_tensor(fac[-1]) - tensor) ** 2) / tl.norm(tensor) ** 2)
+            rnk.append(temp_rank)
 
         # pick the lowest error and continue with that
         min_err.append(min(err))
-        min_rank.append(ranks[err.index(min(err))])
+        min_rank.append(rnk[err.index(min(err))])
         factors.append(fac[err.index(min(err))])
 
+        ranks = [min_rank[-1]] * tensor.ndim
 
     # check if specified ranks are already included in the calculations
     specified_ranks = [[i] * tensor.ndim for i in range(1, num_comps+1)]
-    for ranks in specified_ranks:
-        if ranks not in min_rank:
-            factors.append(tucker(tensor, rank=ranks, svd='randomized_svd'))
+    for rnks in specified_ranks:
+        if rnks not in min_rank:
+            factors.append(tucker(tensor, rank=rnks, svd='randomized_svd'))
             min_err.append((tl.norm(tl.tucker_to_tensor(fac[-1]) - tensor) ** 2) / tl.norm(tensor) ** 2)
-            min_rank.append(ranks)
+            min_rank.append(rnks)
 
     return factors, min_err, min_rank

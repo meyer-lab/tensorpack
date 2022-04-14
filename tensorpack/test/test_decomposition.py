@@ -12,7 +12,7 @@ from tensordata.atyeo import data as atyeo
 from tensordata.alter import data as alter
 from tensordata.zohar import data as zohar
 from ..SVD_impute import IterativeSVD
-from ..tucker import perform_tucker
+from ..tucker import tucker_decomp
 
 
 def test_impute_missing_mat():
@@ -29,7 +29,7 @@ def test_impute_missing_mat():
 
 def test_decomp_obj():
     a = Decomposition(atyeo().tensor)
-    b = Decomposition(atyeo().tensor, method=perform_tucker)
+    b = Decomposition(atyeo().tensor, method=tucker_decomp)
     a.perform_tfac()
     a.perform_PCA()
     b.perform_tucker()

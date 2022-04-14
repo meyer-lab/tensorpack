@@ -144,15 +144,27 @@ def tucker_reduced_Dsize(tensor, ranks:list):
 def tucker_expo(ax, decomp:Decomposition):
     """ Error versus data size for minimum error combination of rank from Tucker decomposition. """
     decomp.perform_tucker()
-
     sizes = tucker_reduced_Dsize(decomp.data, decomp.TuckRank)
+
+    # separate those with equal number of components at all dims
+    specified_ranks = [[i] * decomp.data.ndim for i in range(1, decomp.rrs + 1)]
+    specified_err = []
+    specified_size = []
+
+    for rnk in specified_ranks:
+        assert rnk in decomp.TuckRank
+        indx = decomp.TuckRank.index[rnk]
+        specified_err.append(decomp.TuckErr[indx])
+        specified_size.append(sizes[indx])
+    assert len(specificed_ranks) == len(specified_err) == len(specified_size)
+
     ax.scatter(sizes, decomp.TuckErr)
+    ax.scatter(specified_size, specified_err, "*", color="C2")
     ax.set_ylim((0.0, 1.0))
     ax.set_title('Data reduction, Tucker')
     ax.set_ylabel('Normalized Unexplained Variance')
     ax.set_xlabel('Size of Reduced Data')
-    
-    pass
+
 
 def plot_weights(ax, pos, decomp):
     # figure 5 in MSB
