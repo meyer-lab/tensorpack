@@ -7,8 +7,6 @@ import pandas as pd
 from matplotlib.ticker import ScalarFormatter
 from .decomposition import Decomposition
 from tensorpack import perform_CP
-import seaborn as sns
-from matplotlib import gridspec, pyplot as plt
 
 
 def tfacr2x(ax, decomp:Decomposition):
@@ -127,70 +125,30 @@ def q2xentry(ax, decomp, methodname = "CP"):
     ax.legend(loc=4)
 
 
-def plot_weight_mode(ax, factor, labels, showylabel = True, title = ""):
+def plot_weight_mode(ax, factor, labels=False, title = ""):
     """
-    Plots heatmaps for each input dimension by component.
+    Plots heatmaps for a single mode factors.
 
     Parameters
      ----------
     ax : axis object
         Plot information for a subplot of figure f.
-    tensor : numpy ndarray
-        Takes a tensor to perform CP on.
-    axes : tuple of 3 lists
-        Allows for naming graph axes.
+    factor: numpy array
+        Factorized mode
+    labels: list of string or False
+        Labels for each of the elements
+    title" String
+        Figure title
     """
     rank = np.shape(factor)[1]
     components = [str(ii + 1) for ii in range(rank)]
-    facs = pd.DataFrame(factor, columns=[f"Cmp. {i}" for i in np.arange(1, rank + 1)], index=labels)
+    facs = pd.DataFrame(factor, columns=[f"Cmp. {i}" for i in np.arange(1, rank + 1)],
+                        index=labels if labels is not False else list(range(np.shape(factor)[0])))
 
-    yticklabels = labels if showylabel else False
-    sns.heatmap(facs, cmap="PiYG", center=0, xticklabels=components, yticklabels=yticklabels, cbar=True, vmin=-1.0,
+    sns.heatmap(facs, cmap="PiYG", center=0, xticklabels=components, yticklabels=labels, cbar=True, vmin=-1.0,
                 vmax=1.0, ax=ax)
 
     ax.set_xlabel("Components")
     ax.set_title(title)
-
-
-def plot_weights(ax, tfac, axes):
-    """
-    Plots heatmaps for each input dimension by component.
-
-    Parameters
-    ----------
-    ax : axis object
-        Plot information for a subplot of figure f.
-    tensor : numpy ndarray 
-        Takes a tensor to perform CP on.
-    axes : tuple of 3 lists
-        Allows for naming graph axes. 
-    """
-    subjects, receptors, antigens = axes
-
-    components =  [str(ii + 1) for ii in range(tfac.rank)]
-
-    subs = pd.DataFrame(tfac.factors[0], columns=[f"Cmp. {i}" for i in np.arange(1, tfac.rank + 1)], index=subjects)
-    rec = pd.DataFrame(tfac.factors[1], columns=[f"Cmp. {i}" for i in np.arange(1, tfac.rank + 1)], index=receptors)
-    ant = pd.DataFrame(tfac.factors[2], columns=[f"Cmp. {i}" for i in np.arange(1, tfac.rank + 1)], index=antigens)
-    
-    gs = gridspec.GridSpec(1, 3, wspace=0.5)
-    ax1 = plt.subplot(gs[0])
-    ax2 = plt.subplot(gs[1])
-    ax3 = plt.subplot(gs[2])
-
-    plot_weight_mode(ax1, tfac.factors[0], subjects, showylabel=False, title="Subjects")
-    plot_weight_mode(ax2, tfac.factors[1], receptors, showylabel=True, title="Subjects")
-    plot_weight_mode(ax3, tfac.factors[2], antigens, showylabel=True, title="Subjects")
-
-    sns.heatmap(subs, cmap="PiYG", center=0, xticklabels=components, cbar=True, vmin=-1.0, vmax=1.0, ax=ax1)
-    sns.heatmap(rec, cmap="PiYG", center=0, xticklabels=components, yticklabels=receptors, cbar=False, vmin=-1.0, vmax=1.0, ax=ax2)
-    sns.heatmap(ant, cmap="PiYG", center=0, xticklabels=components, yticklabels=antigens, cbar=False, vmin=-1.0, vmax=1.0, ax=ax3)
-
-    ax1.set_xlabel("Components")
-    ax1.set_title("Subjects")
-    ax2.set_xlabel("Components")
-    ax2.set_title("Receptors")
-    ax3.set_xlabel("Components")
-    ax3.set_title("Antigens")
 
 
