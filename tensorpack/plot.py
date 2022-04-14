@@ -170,20 +170,20 @@ def tucker_reduction(ax, decomp:Decomposition):
     sizes = tucker_reduced_Dsize(decomp.data, decomp.TuckRank)
 
     # separate those with equal number of components at all dims
-    specified_ranks = [[i] * decomp.data.ndim for i in range(1, decomp.rrs + 1)]
+    specified_ranks = [[i] * decomp.data.ndim for i in range(1, max(decomp.rrs) + 1)]
     specified_err = []
     specified_size = []
 
     for rnk in specified_ranks:
         assert rnk in decomp.TuckRank
-        indx = decomp.TuckRank.index[rnk]
+        indx = decomp.TuckRank.index(rnk)
         specified_err.append(decomp.TuckErr[indx])
         specified_size.append(sizes[indx])
-    assert len(specificed_ranks) == len(specified_err) == len(specified_size)
+    assert len(specified_ranks) == len(specified_err) == len(specified_size)
 
     ax.scatter(sizes, decomp.TuckErr)
-    ax.scatter(specified_size, specified_err, "*", color="C2")
-    ax.set_ylim((0.0, 1.0))
+    ax.plot(specified_size, specified_err, "*", color="C3", markersize=12)
+    # ax.set_ylim((0.0, 1.0))
     ax.set_title('Data reduction, Tucker')
     ax.set_ylabel('Normalized Unexplained Variance')
     ax.set_xlabel('Size of Reduced Data')

@@ -37,7 +37,7 @@ def tucker_decomp(tensor, num_comps: int):
     min_rank = [start]
     ranks = min_rank * tensor.ndim
 
-    for _ in range(num_comps+1):
+    for _ in range(tensor.ndim * num_comps+1):
 
         fac = []
         err = []
