@@ -154,8 +154,8 @@ def tucker_reduced_Dsize(tensor, ranks:list):
 
     return sizes
 
-def tucker_reduction(ax, decomp:Decomposition):
-    """ Error versus data size for minimum error combination of rank from Tucker decomposition.
+def tucker_reduction(ax, decomp:Decomposition, cp_decomp:Decomposition):
+    """ Error versus data size for minimum error combination of rank from Tucker decomposition versus CP decomposition.
     The error for those combinations that are the same dimensions, ie., for a 3-D tensor, [1, 1, 1], [2, 2, 2], etc
     are shown by a different marker shape and color.
     
@@ -165,9 +165,16 @@ def tucker_reduction(ax, decomp:Decomposition):
         Plot information for a subplot of figure f.
     decomp : Decomposition
         Takes a Decomposition object to run perform_tucker().
+    cp_decomp : Decomposition
+        Takes a Decomposition object to run perform_CP().
     """
+    # tucker decomp
     decomp.perform_tucker()
     sizes = tucker_reduced_Dsize(decomp.data, decomp.TuckRank)
+
+    # CP decomp
+    cp_decomp.perform_tfac()
+    CPR2X, sizeTfac = np.asarray(cp_decomp.TR2X), cp_decomp.sizeT
 
     # separate those with equal number of components at all dims
     specified_ranks = [[i] * decomp.data.ndim for i in range(1, max(decomp.rrs) + 1)]
@@ -181,12 +188,15 @@ def tucker_reduction(ax, decomp:Decomposition):
         specified_size.append(sizes[indx])
     assert len(specified_ranks) == len(specified_err) == len(specified_size)
 
-    ax.scatter(sizes, decomp.TuckErr)
-    ax.plot(specified_size, specified_err, "*", color="C3", markersize=12)
-    # ax.set_ylim((0.0, 1.0))
-    ax.set_title('Data reduction, Tucker')
+    ax.plot(sizes, decomp.TuckErr, ".", label="Tucker", color='C1', markersize=13, alpha=0.5)
+    ax.plot(specified_size, specified_err, "*", label="same-dims Tucker", color="C3", markersize=16, alpha=0.5)
+    ax.plot(sizeTfac, 1.0 - CPR2X, ".", label="CP", color='C2', markersize=13, alpha=0.5)
+    ax.set_ylim((0.0, 1.0))
+    ax.set_xscale("log", base=2)
+    ax.set_title('Data Reduction Comparison')
     ax.set_ylabel('Normalized Unexplained Variance')
     ax.set_xlabel('Size of Reduced Data')
+    ax.legend()
 
 def plot_weight_mode(ax, factor, labels=False, title = ""):
     """
