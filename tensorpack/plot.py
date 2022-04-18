@@ -167,6 +167,21 @@ def tucker_reduction(ax, decomp:Decomposition, cp_decomp:Decomposition):
         Takes a Decomposition object to run perform_tucker().
     cp_decomp : Decomposition
         Takes a Decomposition object to run perform_CP().
+
+    Example
+    -------
+    from tensorpack.tucker import tucker_decomp
+    from tensorpack.tucker import tucker_decomp
+    from tensorpack.plot import tucker_reduced_Dsize, tucker_reduction
+    from tensordata.zohar import data3D as zohar
+    from tensorpack.decomposition import Decomposition
+    b = Decomposition(zohar().tensor, method=tucker_decomp)
+    c = Decomposition(zohar().tensor)
+    import matplotlib.pyplot as plt
+    f= plt.figure()
+    ax = f.add_subplot()
+    fig = tucker_reduction(ax, b, c)
+    plt.savefig("tucker_cp.svg")
     """
     # tucker decomp
     decomp.perform_tucker()
