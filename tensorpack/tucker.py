@@ -37,7 +37,7 @@ def tucker_decomp(tensor, num_comps: int):
     min_rank = [start]
     ranks = min_rank * tensor.ndim
 
-    for _ in range(tensor.ndim * num_comps+1):
+    for _ in range(tensor.ndim * num_comps):
 
         fac = []
         err = []
@@ -57,6 +57,8 @@ def tucker_decomp(tensor, num_comps: int):
         factors.append(fac[err.index(min(err))])
 
         ranks = [min_rank[-1]] * tensor.ndim
+        if sum(ranks[-1]) >= tensor.ndim * num_comps:
+            break
 
     # check if specified ranks are already included in the calculations
     specified_ranks = [[i] * tensor.ndim for i in range(1, num_comps+1)]

@@ -171,14 +171,13 @@ def tucker_reduction(ax, decomp:Decomposition, cp_decomp:Decomposition):
     Example
     -------
     from tensorpack.tucker import tucker_decomp
-    from tensorpack.tucker import tucker_decomp
     from tensorpack.plot import tucker_reduced_Dsize, tucker_reduction
     from tensordata.zohar import data3D as zohar
     from tensorpack.decomposition import Decomposition
     b = Decomposition(zohar().tensor, method=tucker_decomp)
     c = Decomposition(zohar().tensor)
     import matplotlib.pyplot as plt
-    f= plt.figure()
+    f = plt.figure()
     ax = f.add_subplot()
     fig = tucker_reduction(ax, b, c)
     plt.savefig("tucker_cp.svg")
@@ -205,6 +204,9 @@ def tucker_reduction(ax, decomp:Decomposition, cp_decomp:Decomposition):
 
     ax.plot(sizes, decomp.TuckErr, ".", label="Tucker", color='C1', markersize=13, alpha=0.5)
     ax.plot(specified_size, specified_err, "*", label="same-dims Tucker", color="C3", markersize=16, alpha=0.5)
+    for i in range(len(sizes)):
+        ax.annotate(decomp.TuckRank[i], (sizes[i], decomp.TuckErr[i]), xytext=(sizes[i], 
+                decomp.TuckErr[i]+ (-1)**i * 0.02), size=9)
     ax.plot(sizeTfac, 1.0 - CPR2X, ".", label="CP", color='C2', markersize=13, alpha=0.5)
     ax.set_ylim((0.0, 1.0))
     ax.set_xscale("log", base=2)
