@@ -29,7 +29,6 @@ def tucker_decomp(tensor, num_comps: int):
     if type(tensor) is not np.ndarray:
         tensor = tensor.to_numpy()
 
-
     # step 1 with 1 component along every dimension
     start = [1] * tensor.ndim
     factors = [tucker(tensor, rank=start, svd='randomized_svd')]
@@ -57,15 +56,5 @@ def tucker_decomp(tensor, num_comps: int):
         factors.append(fac[err.index(min(err))])
 
         ranks = [min_rank[-1]] * tensor.ndim
-        if sum(ranks[-1]) >= tensor.ndim * num_comps:
-            break
-
-    # check if specified ranks are already included in the calculations
-    specified_ranks = [[i] * tensor.ndim for i in range(1, num_comps+1)]
-    for rnks in specified_ranks:
-        if rnks not in min_rank:
-            factors.append(tucker(tensor, rank=rnks, svd='randomized_svd'))
-            min_err.append((tl.norm(tl.tucker_to_tensor(fac[-1]) - tensor) ** 2) / tl.norm(tensor) ** 2)
-            min_rank.append(rnks)
 
     return factors, min_err, min_rank

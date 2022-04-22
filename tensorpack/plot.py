@@ -190,24 +190,8 @@ def tucker_reduction(ax, decomp:Decomposition, cp_decomp:Decomposition):
     cp_decomp.perform_tfac()
     CPR2X, sizeTfac = np.asarray(cp_decomp.TR2X), cp_decomp.sizeT
 
-    # separate those with equal number of components at all dims
-    specified_ranks = [[i] * decomp.data.ndim for i in range(1, max(decomp.rrs) + 1)]
-    specified_err = []
-    specified_size = []
-
-    for rnk in specified_ranks:
-        assert rnk in decomp.TuckRank
-        indx = decomp.TuckRank.index(rnk)
-        specified_err.append(decomp.TuckErr[indx])
-        specified_size.append(sizes[indx])
-    assert len(specified_ranks) == len(specified_err) == len(specified_size)
-
-    ax.plot(sizes, decomp.TuckErr, ".", label="Tucker", color='C1', markersize=13, alpha=0.5)
-    ax.plot(specified_size, specified_err, "*", label="same-dims Tucker", color="C3", markersize=16, alpha=0.5)
-    for i in range(len(sizes)):
-        ax.annotate(decomp.TuckRank[i], (sizes[i], decomp.TuckErr[i]), xytext=(sizes[i], 
-                decomp.TuckErr[i]+ (-1)**i * 0.02), size=9)
-    ax.plot(sizeTfac, 1.0 - CPR2X, ".", label="CP", color='C2', markersize=13, alpha=0.5)
+    ax.plot(sizes, decomp.TuckErr, label="Tucker", color='C0', lw=3)
+    ax.plot(sizeTfac, 1.0 - CPR2X, ".", label="CP", color='C1', markersize=12)
     ax.set_ylim((0.0, 1.0))
     ax.set_xscale("log", base=2)
     ax.set_title('Data Reduction Comparison')
