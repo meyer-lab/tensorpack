@@ -10,6 +10,7 @@ from ..decomposition import Decomposition
 from ..cmtf import perform_CP, calcR2X
 from tensordata.atyeo import data as atyeo
 from ..SVD_impute import IterativeSVD
+from ..tucker import tucker_decomp
 
 
 def test_impute_missing_mat():
@@ -26,10 +27,13 @@ def test_impute_missing_mat():
 
 def test_decomp_obj():
     a = Decomposition(atyeo().tensor)
+    b = Decomposition(atyeo().tensor, method=tucker_decomp)
     a.perform_tfac()
     a.perform_PCA()
+    b.perform_tucker()
     assert len(a.PCAR2X) == len(a.sizePCA)
     assert len(a.TR2X) == len(a.sizeT)
+    assert len(b.TuckErr) == len(b.TuckRank)
 
     # test decomp save
     fname = "test_temp_atyeo.pkl"

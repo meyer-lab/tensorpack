@@ -125,12 +125,86 @@ def q2xentry(ax, decomp, methodname = "CP"):
     ax.legend(loc=4)
 
 
+def tucker_reduced_Dsize(tensor, ranks:list):
+    """ Output the error (1 - r2x) for each size of the data at each component # for tucker decomposition.
+    This forms the x-axis of the error vs. data size plot.
+
+    Parameters
+    ----------
+    tensor : xarray or numpy.ndarray
+        the multi-dimensional input data
+    ranks : list
+        the list of minimum-error Tucker fits for each component-combinations.
+
+    Returns
+    -------
+    sizes : list
+        the size of reduced data by Tucker for each error.
+    """
+    # if tensor is xarray...
+    if type(tensor) is not np.ndarray:
+        tensor = tensor.to_numpy()
+
+    sizes = []
+    for rank in ranks:
+        sum_comps = 0
+        for i in range(len(tensor.shape)):
+            sum_comps += rank[i] * tensor.shape[i]
+        sizes.append(sum_comps)
+
+    return sizes
+
+def tucker_reduction(ax, decomp:Decomposition, cp_decomp:Decomposition):
+    """ Error versus data size for minimum error combination of rank from Tucker decomposition versus CP decomposition.
+    The error for those combinations that are the same dimensions, ie., for a 3-D tensor, [1, 1, 1], [2, 2, 2], etc
+    are shown by a different marker shape and color.
+    
+    Parameters
+    ----------
+    ax : axis object
+        Plot information for a subplot of figure f.
+    decomp : Decomposition
+        Takes a Decomposition object to run perform_tucker().
+    cp_decomp : Decomposition
+        Takes a Decomposition object to run perform_CP().
+
+    Example
+    -------
+    from tensorpack.tucker import tucker_decomp
+    from tensorpack.plot import tucker_reduced_Dsize, tucker_reduction
+    from tensordata.zohar import data3D as zohar
+    from tensorpack.decomposition import Decomposition
+    b = Decomposition(zohar().tensor, method=tucker_decomp)
+    c = Decomposition(zohar().tensor)
+    import matplotlib.pyplot as plt
+    f = plt.figure()
+    ax = f.add_subplot()
+    fig = tucker_reduction(ax, b, c)
+    plt.savefig("tucker_cp.svg")
+    """
+    # tucker decomp
+    decomp.perform_tucker()
+    sizes = tucker_reduced_Dsize(decomp.data, decomp.TuckRank)
+
+    # CP decomp
+    cp_decomp.perform_tfac()
+    CPR2X, sizeTfac = np.asarray(cp_decomp.TR2X), cp_decomp.sizeT
+
+    ax.plot(sizes, decomp.TuckErr, label="Tucker", color='C0', lw=3)
+    ax.plot(sizeTfac, 1.0 - CPR2X, ".", label="CP", color='C1', markersize=12)
+    ax.set_ylim((0.0, 1.0))
+    ax.set_xscale("log", base=2)
+    ax.set_title('Data Reduction Comparison')
+    ax.set_ylabel('Normalized Unexplained Variance')
+    ax.set_xlabel('Size of Reduced Data')
+    ax.legend()
+
 def plot_weight_mode(ax, factor, labels=False, title = ""):
     """
     Plots heatmaps for a single mode factors.
 
     Parameters
-     ----------
+    ----------
     ax : axis object
         Plot information for a subplot of figure f.
     factor: numpy array
@@ -150,5 +224,3 @@ def plot_weight_mode(ax, factor, labels=False, title = ""):
 
     ax.set_xlabel("Components")
     ax.set_title(title)
-
-
