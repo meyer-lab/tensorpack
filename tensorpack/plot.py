@@ -4,6 +4,7 @@ This file makes all standard plots for tensor analysis. Requires a Decomposition
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from matplotlib.ticker import ScalarFormatter
 from .decomposition import Decomposition
 from tensorpack import perform_CP
