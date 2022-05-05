@@ -2,7 +2,7 @@ import numpy as np
 
 def create_missingness(tensor, drop):
     """
-    Creates missingness for a full tensor.
+    Creates missingness for a full tensor. Slgihtly faster than entry_drop()
     """
     idxs = np.argwhere(np.isfinite(tensor))
     dropidxs = idxs[np.random.choice(idxs.shape[0], drop, replace=False)]
@@ -10,7 +10,7 @@ def create_missingness(tensor, drop):
     tensor[dropidxs] = np.nan
 
 
-def entry_drop(tensor, drop):
+def entry_drop(tensor, drop, seed=None):
     """
     Drops random values within a tensor. Finds a bare minimum cube before dropping values to ensure PCA remains viable.
 
@@ -27,6 +27,10 @@ def entry_drop(tensor, drop):
     None : tensor is modified with missing values.
     """
     # Track chords for each mode to ensure bare minimum cube covers each chord at least once
+
+    if seed != None:
+        np.random.seed(seed)
+
     midxs = np.zeros((tensor.ndim, max(tensor.shape)))
     for i in range(tensor.ndim):
         midxs[i] = [1 for n in range(tensor.shape[i])] + [0 for m in range(len(midxs[i]) - tensor.shape[i])]
@@ -54,7 +58,11 @@ def entry_drop(tensor, drop):
     for i in dropidxs: tensor[i] = np.nan
 
 
-def joint_entry_drop(big_tensor, small_tensor, drop):
+def joint_entry_drop(big_tensor, small_tensor, drop, seed=None):
+
+    if seed != None:
+        np.random.seed(seed)
+    
     # Track chords for each mode to ensure bare minimum cube covers each chord at least once
     midxs1 = np.zeros((big_tensor.ndim, max(big_tensor.shape)))
     for i in range(big_tensor.ndim):
@@ -139,7 +147,7 @@ def joint_entry_drop(big_tensor, small_tensor, drop):
         for i in dropidxs2: small_tensor[i] = np.nan
 
 
-def chord_drop(tensor, drop):
+def chord_drop(tensor, drop, seed=None):
     """
     Removes chords along axis = 0 of a tensor.
 
@@ -155,6 +163,10 @@ def chord_drop(tensor, drop):
     -------
     None : tensor is modified with missing chords.
     """
+
+    if seed != None:
+        np.random.seed(seed)
+
     # Drop chords based on random idxs
     chordlen = tensor.shape[0]
     for _ in range(drop):
