@@ -224,3 +224,11 @@ def plot_weight_mode(ax, factor, labels=False, title = ""):
 
     ax.set_xlabel("Components")
     ax.set_title(title)
+
+
+def iteration_error(ax, error:np.ndarray):
+    ax.plot(range(error.size), error)
+    ax.set_ylim((0.0, 1.0))
+    ax.set_xlim((0, error.size))
+    ax.set_xlabel('Iterations')
+    ax.set_ylabel('R2X')
