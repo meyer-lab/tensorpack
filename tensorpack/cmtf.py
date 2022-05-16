@@ -217,7 +217,7 @@ def initialize_cp(tensor: np.ndarray, rank: int):
     return tl.cp_tensor.CPTensor((None, factors))
 
 
-def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, track_error=False, error:np.ndarray=None):
+def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, track_error=None, ax=None):
     """ Perform CP decomposition. """
     tFac = initialize_cp(tOrig, r)
 
@@ -227,8 +227,7 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, track_error=Fal
     R2X_last = -np.inf
     tFac.R2X = calcR2X(tFac, tOrig)
     if track_error:
-        assert error.ndim == 1
-        assert error.size > maxiter
+        error = np.ones(maxiter+1)
         error[:] = np.nan
         error[0] = 1-tFac.R2X
 
@@ -256,7 +255,8 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, track_error=Fal
 
     if r > 1:
         tFac = sort_factors(tFac)
-
+    
+    if track_error: track_error(ax,error)
     return tFac
 
 
