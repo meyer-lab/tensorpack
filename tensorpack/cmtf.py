@@ -246,7 +246,7 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, callback=None):
         assert tFac.R2X > 0.0
         
         if callback:
-            metric = i + 1                  # can be adjusted
+            metric += 1
             callback.update(1-tFac.R2X, metric)
 
         if tFac.R2X - R2X_last < tol:
