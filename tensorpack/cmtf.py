@@ -217,7 +217,7 @@ def initialize_cp(tensor: np.ndarray, rank: int):
     return tl.cp_tensor.CPTensor((None, factors))
 
 
-def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, track_error=None, ax=None):
+def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, callback=None):
     """ Perform CP decomposition. """
     tFac = initialize_cp(tOrig, r)
 
@@ -226,10 +226,9 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, track_error=Non
 
     R2X_last = -np.inf
     tFac.R2X = calcR2X(tFac, tOrig)
-    if track_error:
-        error = np.ones(maxiter+1)
-        error[:] = np.nan
-        error[0] = 1-tFac.R2X
+    if callback:
+        metric = 0
+        callback.update(1-tFac.R2X, metric)
 
     # Precalculate the missingness patterns
     uniqueInfo = [np.unique(np.isfinite(B.T), axis=1, return_inverse=True) for B in unfolded]
@@ -243,9 +242,12 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, track_error=Non
 
         R2X_last = tFac.R2X
         tFac.R2X = calcR2X(tFac, tOrig)
-        if track_error: error[i+1] = 1-tFac.R2X
         tq.set_postfix(R2X=tFac.R2X, delta=tFac.R2X - R2X_last, refresh=False)
         assert tFac.R2X > 0.0
+        
+        if callback:
+            metric = i + 1                  # can be adjusted
+            callback.update(1-tFac.R2X, metric)
 
         if tFac.R2X - R2X_last < tol:
             break
@@ -256,7 +258,6 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, track_error=Non
     if r > 1:
         tFac = sort_factors(tFac)
     
-    if track_error: track_error(ax,error)
     return tFac
 
 
