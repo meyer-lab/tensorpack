@@ -217,7 +217,30 @@ def initialize_cp(tensor: np.ndarray, rank: int):
     return tl.cp_tensor.CPTensor((None, factors))
 
 
-def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, track_error=None, ax=None):
+class track_error():
+    """ A callback class to track errors in ALS iterations """
+    def __init__(self):
+        pass
+
+    def start_R2X_record(self, iter, first_error):
+        self.train_errors = np.ones(iter)
+        self.train_errors[:] = np.nan
+        self.train_errors[0] = first_error
+
+    def add_R2X_record(self, iter_idx, error):
+        self.train_errors[iter_idx] = error
+
+    def plot_iteration_error(self, ax):
+        ## TODO: need to import the right package to make this work, or move it elsewhere
+        assert hasattr(self, 'train_errors')
+        ax.plot(range(self.train_errors.size), error)
+        ax.set_ylim((0.0, 1.0))
+        ax.set_xlim((0, self.train_errors.size))
+        ax.set_xlabel('Iterations')
+        ax.set_ylabel('R2X')
+
+
+def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, track_error=None):
     """ Perform CP decomposition. """
     tFac = initialize_cp(tOrig, r)
 
@@ -227,9 +250,7 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, track_error=Non
     R2X_last = -np.inf
     tFac.R2X = calcR2X(tFac, tOrig)
     if track_error:
-        error = np.ones(maxiter+1)
-        error[:] = np.nan
-        error[0] = 1-tFac.R2X
+        track_error.start_R2X_record(maxiter+1, 1-tFac.R2X)
 
     # Precalculate the missingness patterns
     uniqueInfo = [np.unique(np.isfinite(B.T), axis=1, return_inverse=True) for B in unfolded]
@@ -243,7 +264,8 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, track_error=Non
 
         R2X_last = tFac.R2X
         tFac.R2X = calcR2X(tFac, tOrig)
-        if track_error: error[i+1] = 1-tFac.R2X
+        if track_error:
+            track_error.add_R2X_record(i+1, 1-tFac.R2X)
         tq.set_postfix(R2X=tFac.R2X, delta=tFac.R2X - R2X_last, refresh=False)
         assert tFac.R2X > 0.0
 
@@ -255,8 +277,7 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, track_error=Non
 
     if r > 1:
         tFac = sort_factors(tFac)
-    
-    if track_error: track_error(ax,error)
+
     return tFac
 
 
