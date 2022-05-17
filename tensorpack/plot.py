@@ -228,6 +228,9 @@ def plot_weight_mode(ax, factor, labels=False, title = ""):
 
 class tracker():
     def __init__(self, max = 51, eval_name = 'Iteration', entry_name = 'R2X') :
+        """
+        Creates an array, tracks next unfilled entry, holds axis names for plotting
+        """
         self.entries = max
         a = np.ones((max,2))
         a[:] = np.nan
@@ -238,7 +241,7 @@ class tracker():
     
     def update(self, entry, eval):
         """
-        Updates the next np.nan to the newest entry
+        Updates the next np.nan to the next unfilled entry
         """
         self.array[self.counter,0] = eval
         self.array[self.counter,1] = entry
