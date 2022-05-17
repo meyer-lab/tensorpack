@@ -7,6 +7,7 @@ import pandas as pd
 from matplotlib.ticker import ScalarFormatter
 from .decomposition import Decomposition
 from tensorpack import perform_CP
+import seaborn as sns
 
 
 def tfacr2x(ax, decomp:Decomposition):
@@ -225,10 +226,23 @@ def plot_weight_mode(ax, factor, labels=False, title = ""):
     ax.set_xlabel("Components")
     ax.set_title(title)
 
+class tracker():
+    def __init__(self, max, entry_name = 'R2X', eval_name = 'Iteration') :
+        self.entries = max
+        arr = np.ones((max,2))
+        arr[:] = np.nan
+        self.array = arr
+        self.metric = entry_name
+        self.eval = eval_name
+    
+    def update(self, entry, eval):
+        index = np.where(np.isnan(self.array) == True)
+        self.arr[0,index[0][0]] = entry
+        self.arr[1,index[1][0]] = eval
 
-def iteration_error(ax, error:np.ndarray):
-    ax.plot(range(error.size), error)
-    ax.set_ylim((0.0, 1.0))
-    ax.set_xlim((0, error.size))
-    ax.set_xlabel('Iterations')
-    ax.set_ylabel('R2X')
+    def plot(self, ax):
+        ax.plot(self.array[:,0], self.array[:,1])
+        ax.set_ylim((0.0, 1.0))
+        ax.set_xlim((0, self.entries))
+        ax.set_xlabel(self.eval)
+        ax.set_ylabel(self.metric)
