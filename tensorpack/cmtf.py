@@ -217,8 +217,9 @@ def initialize_cp(tensor: np.ndarray, rank: int):
     return tl.cp_tensor.CPTensor((None, factors))
 
 
-def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False):
+def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, callback=None):
     """ Perform CP decomposition. """
+    if callback: callback.begin()
     tFac = initialize_cp(tOrig, r)
 
     # Pre-unfold
@@ -226,12 +227,13 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False):
 
     R2X_last = -np.inf
     tFac.R2X = calcR2X(tFac, tOrig)
+    if callback: callback.first_entry(tFac)
 
     # Precalculate the missingness patterns
     uniqueInfo = [np.unique(np.isfinite(B.T), axis=1, return_inverse=True) for B in unfolded]
 
     tq = tqdm(range(maxiter), disable=(not progress))
-    for _ in tq:
+    for i in tq:
         # Solve on each mode
         for m in range(len(tFac.factors)):
             kr = khatri_rao(tFac.factors, skip_matrix=m)
@@ -241,6 +243,7 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False):
         tFac.R2X = calcR2X(tFac, tOrig)
         tq.set_postfix(R2X=tFac.R2X, delta=tFac.R2X - R2X_last, refresh=False)
         assert tFac.R2X > 0.0
+        if callback: callback.update(tFac)
 
         if tFac.R2X - R2X_last < tol:
             break
@@ -250,7 +253,7 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False):
 
     if r > 1:
         tFac = sort_factors(tFac)
-
+    
     return tFac
 
 
