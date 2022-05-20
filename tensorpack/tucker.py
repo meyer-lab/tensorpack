@@ -5,7 +5,7 @@ import numpy as np
 import itertools as it
 import tensorly as tl
 
-def tucker_decomp(tensor, num_comps: int):
+def tucker_decomp(tensor, num_comps: int, mask=None):
     """ Performs Tucker decomposition.
 
     Parameters
@@ -31,7 +31,7 @@ def tucker_decomp(tensor, num_comps: int):
 
     # step 1 with 1 component along every dimension
     start = [1] * tensor.ndim
-    factors = [tucker(tensor, rank=start, svd='randomized_svd')]
+    factors = [tucker(tensor, rank=start, svd='randomized_svd', mask=mask)]
     min_err = [(tl.norm(tl.tucker_to_tensor(factors[0]) - tensor) ** 2) / tl.norm(tensor) ** 2]
     min_rank = [start]
     ranks = min_rank * tensor.ndim
@@ -46,7 +46,7 @@ def tucker_decomp(tensor, num_comps: int):
             temp_rank[indx] = val[indx] + 1
 
             # calculate error for this rank combination
-            fac.append(tucker(tensor, rank=temp_rank, svd='randomized_svd'))
+            fac.append(tucker(tensor, rank=temp_rank, svd='randomized_svd', mask=mask))
             err.append((tl.norm(tl.tucker_to_tensor(fac[-1]) - tensor) ** 2) / tl.norm(tensor) ** 2)
             rnk.append(temp_rank)
 
