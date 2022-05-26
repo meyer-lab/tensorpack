@@ -34,7 +34,9 @@ class Decomposition():
                 self.hasMatrix = True
         pass
 
-    def perform_tfac(self):
+    def perform_tfac(self, callback=None, rr_callback=1):
+        if callback:
+            self.method(self.data, r=rr_callback, callback=callback)
         self.tfac = [self.method(self.data, r=rr) for rr in self.rrs]
         self.TR2X = [calcR2X(c, tIn=self.data) for c in self.tfac]
         self.sizeT = [rr * sum(self.tfac[0].shape) for rr in self.rrs]
@@ -56,7 +58,7 @@ class Decomposition():
         self.PCAR2X = [calcR2X(c, mIn=flatData) for c in recon]
         self.sizePCA = [sum(flatData.shape) * rr for rr in self.rrs]
 
-    def Q2X_chord(self, drop=5, repeat=3, mode=0):
+    def Q2X_chord(self, drop=5, repeat=3, mode=0, callback=None, rr_callback=1):
         """
         Calculates Q2X when dropping chords along axis = mode from the data using self.method for factor decomposition,
         comparing each component. Drops in Q2X from one component to the next may signify overfitting.
@@ -88,12 +90,15 @@ class Decomposition():
             # Calculate Q2X for each number of components
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:
-                tFac = self.method(missingCube, r=rr)
+                if rr == rr_callback and callback:
+                    tFac = self.method(missingCube, r=rr, callback=callback)
+                else:  
+                    tFac = self.method(missingCube, r=rr)
                 Q2X[x,rr-1] = calcR2X(tFac, tIn=tImp)
 
         self.chordQ2X = Q2X
 
-    def Q2X_entry(self, drop=20, repeat=3, comparePCA=True):
+    def Q2X_entry(self, drop=20, repeat=3, comparePCA=True, callback=None, rr_callback=1):
         """
         Calculates Q2X when dropping entries from the data using self.method for factor decomposition,
         comparing each component. Drops in Q2X from one component to the next may signify overfitting.
@@ -121,23 +126,16 @@ class Decomposition():
         Q2XPCA = np.zeros((repeat,self.rrs[-1]))
         
         for x in range(repeat):
-            if self.hasMatrix:
-                missingCube = np.copy(self.data)
-                missingMatrix = np.copy(self.matrix)
-                tImp = np.copy(self.data)
-                mImp = np.copy(self.matrix)
-                joint_entry_drop(missingCube, missingMatrix, drop)
-            else:
-                missingCube = np.copy(self.data)
-                tImp = np.copy(self.data)
-                entry_drop(missingCube, drop)
+            missingCube = np.copy(self.data)
+            tImp = np.copy(self.data)
+            entry_drop(missingCube, drop)
 
             # Calculate Q2X for each number of components
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:
-                if self.hasMatrix:
-                    tFac = self.method(missingCube, missingMatrix, r=rr)
-                else:
+                if rr == rr_callback and callback:
+                    tFac = self.method(missingCube, r=rr, callback=callback)
+                else:  
                     tFac = self.method(missingCube, r=rr)
                 Q2X[x,rr-1] = calcR2X(tFac, tIn=tImp)
             
