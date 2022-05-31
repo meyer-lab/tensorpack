@@ -1,11 +1,11 @@
 import pickle
 from re import A
 import numpy as np
-from .cmtf import perform_CMTF, perform_CP, calcR2X
+from .cmtf import perform_CP, calcR2X
 from tensorly import partial_svd
 from .SVD_impute import IterativeSVD
 from .tucker import tucker_decomp
-from .impute import create_missingness, entry_drop, joint_entry_drop, chord_drop
+from .impute import entry_drop, chord_drop
 
 class Decomposition():
     def __init__(self, data, matrix=[0], max_rr=5, method=perform_CP):
@@ -34,10 +34,27 @@ class Decomposition():
                 self.hasMatrix = True
         pass
 
-    def perform_tfac(self, callback=None, rr_callback=1):
+    def perform_tfac(self, callback=None):
+        """
+        Paramters
+        ---------
+        callback : tracker Class
+            Optional callback class to track R2X over iteration/runtime.      
+
+        Returns
+        -------
+        self.tfac : list of length max_rr
+            Each value represents the tensor factorization calculated for components 1 to max_rr.
+        self.TR2X : list of length max_rr
+            Each value represents the R2X of factorizations calculated for components 1 to max_rr.
+        self.sizeT : list of length max_rr
+            Each value represents the size of factorizations for components 1 to max_rr.
+        """
         if callback:
-            self.method(self.data, r=rr_callback, callback=callback)
-        self.tfac = [self.method(self.data, r=rr) for rr in self.rrs]
+            self.tfac = [self.method(self.data, r=rr) for rr in np.delete(self.rrs, max(self.rrs)-1)]
+            self.tfac.append(self.method(self.data, r=max(self.rrs), callback=callback))
+        else:
+            self.tfac = [self.method(self.data, r=rr) for rr in self.rrs]
         self.TR2X = [calcR2X(c, tIn=self.data) for c in self.tfac]
         self.sizeT = [rr * sum(self.tfac[0].shape) for rr in self.rrs]
 
@@ -58,7 +75,7 @@ class Decomposition():
         self.PCAR2X = [calcR2X(c, mIn=flatData) for c in recon]
         self.sizePCA = [sum(flatData.shape) * rr for rr in self.rrs]
 
-    def Q2X_chord(self, drop=5, repeat=3, mode=0, callback=None, rr_callback=1):
+    def Q2X_chord(self, drop=5, repeat=3, mode=0, callback=None):
         """
         Calculates Q2X when dropping chords along axis = mode from the data using self.method for factor decomposition,
         comparing each component. Drops in Q2X from one component to the next may signify overfitting.
@@ -71,6 +88,9 @@ class Decomposition():
         repeat : int
         mode : int
             Defaults to mode corresponding to axis = 0. Can be set to any mode of the tensor.
+        callback : tracker Class
+            Optional callback class to track Q2X over iteration/runtime.
+
 
         Returns
         -------
@@ -90,15 +110,15 @@ class Decomposition():
             # Calculate Q2X for each number of components
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:
-                if rr == rr_callback and callback:
+                if callback and rr == max(self.rrs):
                     tFac = self.method(missingCube, r=rr, callback=callback)
-                else:  
+                else:
                     tFac = self.method(missingCube, r=rr)
                 Q2X[x,rr-1] = calcR2X(tFac, tIn=tImp)
 
         self.chordQ2X = Q2X
 
-    def Q2X_entry(self, drop=20, repeat=3, comparePCA=True, callback=None, rr_callback=1):
+    def Q2X_entry(self, drop=20, repeat=3, comparePCA=True, callback=None):
         """
         Calculates Q2X when dropping entries from the data using self.method for factor decomposition,
         comparing each component. Drops in Q2X from one component to the next may signify overfitting.
@@ -112,6 +132,8 @@ class Decomposition():
         comparePCA : boolean
             Defaulted to calculate Q2X for respective principal components using PCA for factorization
             to compare against self.method.
+        callback : tracker Class
+            Optional callback class to track Q2X over iteration/runtime.
 
         Returns
         -------
@@ -133,11 +155,12 @@ class Decomposition():
             # Calculate Q2X for each number of components
             tImp[np.isfinite(missingCube)] = np.nan
             for rr in self.rrs:
-                if rr == rr_callback and callback:
+                if callback and rr == max(self.rrs):
                     tFac = self.method(missingCube, r=rr, callback=callback)
-                else:  
+                else:
                     tFac = self.method(missingCube, r=rr)
                 Q2X[x,rr-1] = calcR2X(tFac, tIn=tImp)
+
             
             # Calculate Q2X for each number of principal components using PCA for factorization as comparison
             if comparePCA:
@@ -164,5 +187,3 @@ class Decomposition():
         with open(pfile, "rb") as input_file:
             tmp_dict = pickle.load(input_file)
             self.__dict__.update(tmp_dict)
-
-    pass
