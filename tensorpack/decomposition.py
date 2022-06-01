@@ -39,7 +39,7 @@ class Decomposition():
         Paramters
         ---------
         callback : tracker Class
-            Optional callback class to track R2X over iteration/runtime.      
+            Optional callback class to track R2X over iteration/runtime for the factorization with max_rr components.      
 
         Returns
         -------
@@ -89,7 +89,7 @@ class Decomposition():
         mode : int
             Defaults to mode corresponding to axis = 0. Can be set to any mode of the tensor.
         callback : tracker Class
-            Optional callback class to track Q2X over iteration/runtime.
+            Optional callback class to track R2X over iteration/runtime for the factorization with max_rr components.
 
 
         Returns
@@ -133,7 +133,7 @@ class Decomposition():
             Defaulted to calculate Q2X for respective principal components using PCA for factorization
             to compare against self.method.
         callback : tracker Class
-            Optional callback class to track Q2X over iteration/runtime.
+            Optional callback class to track R2X over iteration/runtime for the factorization with max_rr components.
 
         Returns
         -------
