@@ -229,7 +229,7 @@ def plot_weight_mode(ax, factor, labels=False, title = ""):
 
 class tracker():
     """
-    Creates an array, tracks next unfilled entry & runtime, holds tracked name for plotting
+    Creates an array of R2X/Q2X values, tracks next unfilled entry when updating runtime/iteration, holds axis titles for plotting
     """
 
     def __init__(self, entry_type = 'R2X', track_runtime = False) :
@@ -241,6 +241,7 @@ class tracker():
         self.start = time.time()
 
     def first_entry(self, tFac):
+        """ Must call before update() """
         self.array = np.full((1,1), 1 - tFac.R2X)
         if self.track_runtime:
             self.time_array = np.full((1,1), time.time() - self.start)
@@ -251,6 +252,7 @@ class tracker():
             self.time_array = np.append(self.time_array, time.time() - self.start)
 
     def plot_iteration(self, ax):
+        """ Plots R2X over iteration """
         ax.plot(range(1, self.array.size+1), self.array)
         ax.set_ylim((0.0, 1.0))
         ax.set_xlim((0, self.array.size))
@@ -258,6 +260,7 @@ class tracker():
         ax.set_ylabel(self.metric)
     
     def plot_runtime(self, ax):
+        """ Plots R2X over runtime """
         assert self.track_runtime
         self.time_array
         ax.plot(self.time_array, self.array)
