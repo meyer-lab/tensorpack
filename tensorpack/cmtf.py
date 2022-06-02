@@ -191,7 +191,7 @@ def initialize_cmtf(tensor: np.ndarray, matrix: np.ndarray, rank: int):
 
 
 def initialize_cp(tensor: np.ndarray, rank: int):
-    r"""Initialize factors used in `parafac`.
+    """Initialize factors used in `parafac`.
     Parameters
     ----------
     tensor : ndarray
