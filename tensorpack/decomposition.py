@@ -50,11 +50,8 @@ class Decomposition():
         self.sizeT : list of length max_rr
             Each value represents the size of factorizations for components 1 to max_rr.
         """
-        if callback:
-            self.tfac = [self.method(self.data, r=rr) for rr in np.delete(self.rrs, max(self.rrs)-1)]
-            self.tfac.append(self.method(self.data, r=max(self.rrs), callback=callback))
-        else:
-            self.tfac = [self.method(self.data, r=rr) for rr in self.rrs]
+        self.tfac = [self.method(self.data, r=rr) for rr in np.delete(self.rrs, max(self.rrs)-1)]
+        self.tfac.append(self.method(self.data, r=max(self.rrs), callback=callback))
         self.TR2X = [calcR2X(c, tIn=self.data) for c in self.tfac]
         self.sizeT = [rr * sum(self.tfac[0].shape) for rr in self.rrs]
 
