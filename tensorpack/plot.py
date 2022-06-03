@@ -264,6 +264,7 @@ class tracker():
     
 def plot_iteration(ax, callback:tracker):
     """ Plots R2X over iteration """
+    callback.findR2X()
     ax.plot(range(1, callback.R2X_array.size+1), callback.R2X_array)
     ax.set_ylim((0.0, 1.0))
     ax.set_xlim((0, callback.R2X_array.size))
@@ -273,6 +274,7 @@ def plot_iteration(ax, callback:tracker):
 def plot_runtime(ax, callback:tracker):
     """ Plots R2X over runtime """
     assert callback.track_runtime
+    callback.findR2X()
     ax.plot(callback.time_array, callback.array)
     ax.set_ylim((0.0, 1.0))
     ax.set_xlim((0, np.max(callback.time_array)*1.2))
