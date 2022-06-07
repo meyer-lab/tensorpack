@@ -249,12 +249,6 @@ class tracker():
         """ Must run to track runtime """
         self.start = time.time()
 
-    def first_entry(self, object):
-        """ Must call before update() """
-        self.array = [object]
-        if self.track_runtime:
-            self.time_array = [time.time() - self.start]
-
     def findR2X(self):
         self.R2X_array = [tFac.R2X for tFac in self.array]
 
