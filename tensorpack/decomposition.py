@@ -8,7 +8,7 @@ from .tucker import tucker_decomp
 from .impute import entry_drop, chord_drop
 
 class Decomposition():
-    def __init__(self, data, matrix=[0], max_rr=5, method=perform_CP):
+    def __init__(self, data, max_rr=5, method=perform_CP):
         """
         Decomposition object designed for plotting. Capable of handling a single tensor and matrix jointly.
 
@@ -27,12 +27,6 @@ class Decomposition():
         self.data = data
         self.method = method
         self.rrs = np.arange(1,max_rr+1)
-        self.hasMatrix = False
-        if isinstance(matrix, np.ndarray):
-            if matrix.ndim == 2:
-                self.matrix = matrix
-                self.hasMatrix = True
-        pass
 
     def perform_tfac(self, callback=None):
         """
