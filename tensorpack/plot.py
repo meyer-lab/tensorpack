@@ -251,7 +251,7 @@ class tracker():
         self.start = time.time()
 
     def findR2X(self):
-        self.R2X_array = [1-tFac.R2X for tFac in self.array]
+        self.R2X_array = [tFac.R2X for tFac in self.array]
 
     def vectorFoo(self):
         """ Take vector object and extract relevant values """ # For Enio
