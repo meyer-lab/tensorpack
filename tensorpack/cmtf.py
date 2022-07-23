@@ -191,7 +191,7 @@ def initialize_cmtf(tensor: np.ndarray, matrix: np.ndarray, rank: int):
 
 
 def initialize_cp(tensor: np.ndarray, rank: int):
-    r"""Initialize factors used in `parafac`.
+    """Initialize factors used in `parafac`.
     Parameters
     ----------
     tensor : ndarray
@@ -227,7 +227,6 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, callback=None):
 
     R2X_last = -np.inf
     tFac.R2X = calcR2X(tFac, tOrig)
-    if callback: callback.first_entry(tFac)
 
     # Precalculate the missingness patterns
     uniqueInfo = [np.unique(np.isfinite(B.T), axis=1, return_inverse=True) for B in unfolded]
@@ -243,7 +242,7 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, callback=None):
         tFac.R2X = calcR2X(tFac, tOrig)
         tq.set_postfix(R2X=tFac.R2X, delta=tFac.R2X - R2X_last, refresh=False)
         assert tFac.R2X > 0.0
-        if callback: callback.update(tFac)
+        if callback: callback(tFac)
 
         if tFac.R2X - R2X_last < tol:
             break
@@ -257,10 +256,11 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, callback=None):
     return tFac
 
 
-def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, progress=True):
+def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, progress=True, callback=None):
     """ Perform CMTF decomposition. """
     assert tOrig.dtype == float
     assert mOrig.dtype == float
+    if callback: callback.begin()
     tFac = initialize_cmtf(tOrig, mOrig, r)
 
     # Pre-unfold
@@ -290,6 +290,7 @@ def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, progress=True):
         R2X = calcR2X(tFac, tOrig, mOrig)
         tq.set_postfix(R2X=R2X, delta=R2X - R2X_last, refresh=False)
         assert R2X > 0.0
+        if callback: callback(tFac)
 
         if R2X - R2X_last < tol:
             break
