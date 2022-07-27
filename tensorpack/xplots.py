@@ -40,7 +40,7 @@ def xplot_components(data:xr.DataArray, rank: int, reorder=[]):
                     cbar=True, vmin=-1.0, vmax=1.0, ax=axes[rr])
         axes[rr].set_xlabel("Components")
         axes[rr].set_title(axes_names[rr])
-    return f
+    return f, axes
 
 
 def reorder_table(df):
