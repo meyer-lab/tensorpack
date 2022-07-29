@@ -79,34 +79,34 @@ class CoupledTensor():
         self.x["*Weight"][:] = np.ones_like(self.x["*Weight"])
 
 
-    def to_CPTensor(self, vars: str):
-        """ Return a CPTensor object that is the factorized version of vars """
-        assert vars in self.dims
-        return CPTensor((self.x["*Weight"].loc[vars, :].to_numpy(),
-                            [self.x["#" + mmode].to_numpy() for mmode in self.dims[vars]]))
+    def to_CPTensor(self, dvars: str):
+        """ Return a CPTensor object that is the factorized version of dvars """
+        assert dvars in self.dims
+        return CPTensor((self.x["*Weight"].loc[dvars, :].to_numpy(),
+                            [self.x["#" + mmode].to_numpy() for mmode in self.dims[dvars]]))
 
-    def calcR2X(self, vars=None):
-        """ Calculate the R2X of vars decomposition. If vars not provide, calculate the overall R2X"""
-        if vars is None:    # find overall R2X
+    def calcR2X(self, dvars=None):
+        """ Calculate the R2X of dvars decomposition. If dvars not provide, calculate the overall R2X"""
+        if dvars is None:    # find overall R2X
             vTop, vBottom = 0.0, 0.0
-            for vars in self.dims:
-                top, bot = calcR2X_TnB(self.data[vars].to_numpy(), self.to_CPTensor(vars).to_tensor())
+            for dvars in self.dims:
+                top, bot = calcR2X_TnB(self.data[dvars].to_numpy(), self.to_CPTensor(dvars).to_tensor())
                 vTop += top
                 vBottom += bot
             return 1.0 - vTop / vBottom
 
-        assert vars in self.dims
-        vTop, vBottom = calcR2X_TnB(self.data[vars].to_numpy(), self.to_CPTensor(vars).to_tensor())
+        assert dvars in self.dims
+        vTop, vBottom = calcR2X_TnB(self.data[dvars].to_numpy(), self.to_CPTensor(dvars).to_tensor())
         return 1.0 - vTop / vBottom
 
-    def reconstruct(self, vars=None):
-        """ Put decomposed factors back into an xr.DataArray (when specify vars name) or and xr.Dataset """
-        if vars is None:  # return the entire xr.Dataset
+    def reconstruct(self, dvars=None):
+        """ Put decomposed factors back into an xr.DataArray (when specify dvars name) or and xr.Dataset """
+        if dvars is None:  # return the entire xr.Dataset
             ndata = {}
             R2Xs = {}
-            for vars in list(self.data.data_vars):
-                ndata[vars] = (self.dims[vars], self.to_CPTensor(vars).to_tensor())
-                R2Xs[vars] = self.calcR2X(vars)     # a bit redundant, but more beautiful
+            for dvars in list(self.data.data_dvars):
+                ndata[dvars] = (self.dims[dvars], self.to_CPTensor(dvars).to_tensor())
+                R2Xs[dvars] = self.calcR2X(dvars)     # a bit redundant, but more beautiful
             return xr.Dataset(
                 data_vars=ndata,
                 coords=self.data.coords,
@@ -114,22 +114,23 @@ class CoupledTensor():
             )
 
         # return just one xr.DataArray
-        assert vars in self.dims
+        assert dvars in self.dims
         return xr.DataArray(
-            data=self.to_CPTensor(vars).to_tensor(),
-            coords={mmode: self.data[mmode].to_numpy() for mmode in self.dims[vars]},
-            name=vars,
-            attrs=dict(R2X = self.calcR2X(vars)),
+            data=self.to_CPTensor(dvars).to_tensor(),
+            coords={mmode: self.data[mmode].to_numpy() for mmode in self.dims[dvars]},
+            name=dvars,
+            attrs=dict(R2X = self.calcR2X(dvars)),
         )
 
-    def khatri_rao(self, vars: str, skip_matrix=None):
-        assert vars in self.dims
-        arr = [self.x["#"+mmode] for mmode in self.dims[vars] if mmode != skip_matrix]
+    def khatri_rao(self, mode: str):
+        assert dvars in self.dims
+        arr = [cpd.x["#"+mmode] for mmode in cpd.data.coords if mmode != mode]
         ## TODO: add Khatri-Rao
 
 
 
-        pass
+        return tl.tenalg.khatri_rao(arr)
+
 
     def perform_CP(self, tol=1e-6, maxiter=50, progress=True):
         """ Perform CP-like coupled tensor factorization """
