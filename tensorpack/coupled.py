@@ -123,13 +123,13 @@ class CoupledTensor():
         )
 
     def khatri_rao(self, mode: str):
-        assert dvars in self.dims
-        arr = [cpd.x["#"+mmode] for mmode in cpd.data.coords if mmode != mode]
-        ## TODO: add Khatri-Rao
-
-
-
-        return tl.tenalg.khatri_rao(arr)
+        ## TODO: test if everything works when data_vars name are not naturally in alphabetically order
+        assert mode in self.data.coords
+        arrs = []  # save kr-ed arrays
+        for dvars in list(self.data.data_vars.keys()):
+            if mode in self.dims[dvars]:
+                arrs.append(tl.tenalg.khatri_rao([self.x["#"+mmode].to_numpy() for mmode in self.dims[dvars] if mmode != mode]))
+        return np.concatenate(arrs, axis=0)
 
 
     def perform_CP(self, tol=1e-6, maxiter=50, progress=True):
@@ -139,6 +139,8 @@ class CoupledTensor():
         for i in tq:
             # Solve on each mode
             tq.set_postfix(refresh=False)  #R2X=R2X, delta=R2X - R2X_last, refresh=False)
+
+            np.linalg.lstsq(cpd.khatri_rao("month"), cpd.unfold["month"].T, rcond=None)[0]
 
         pass
 
