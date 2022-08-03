@@ -131,7 +131,8 @@ class CoupledTensor():
         arrs = []  # save kr-ed arrays
         for dvars in self.data_vars:
             if mode in self.dims[dvars]:
-                arrs.append(tl.tenalg.khatri_rao([self.x["#"+mmode].to_numpy() for mmode in self.dims[dvars] if mmode != mode]))
+                recon = tl.tenalg.khatri_rao([self.x["#"+mmode].to_numpy() for mmode in self.dims[dvars] if mmode != mode])
+                arrs.append(recon * self.x["*Weight"].loc[dvars].to_numpy())    # put weights back to kr
         return np.concatenate(arrs, axis=0)
 
 
@@ -142,11 +143,14 @@ class CoupledTensor():
         for i in tq:
             # Solve on each mode
             for mmode in self.data_coords:
-                # TODO: put all weights onto the weight matrix
-                self.x["#"+mmode][:] = lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, rcond=None)[0].T
+                sol = lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, rcond=None)[0].T
+                for dvars in self.data_vars:
+                    if mmode in self.dims[dvars]:
+                        self.x["*Weight"].loc[dvars] *= np.linalg.norm(sol, axis=0)
+                self.x["#"+mmode][:] = sol / np.linalg.norm(sol, axis=0)
 
             current_R2X = self.calcR2X()
-            print([self.calcR2X(dvars) for dvars in self.data_vars])
+            #print([self.calcR2X(dvars) for dvars in self.data_vars])
             tq.set_postfix(refresh=False, R2X=current_R2X, delta=current_R2X-old_R2X)
             if np.abs(current_R2X-old_R2X) < tol:
                 break
