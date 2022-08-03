@@ -9,9 +9,9 @@ from tqdm import tqdm
 def genSample():
     return xr.Dataset(
         data_vars=dict(
-            vlop=(["month", "time", "people", "state"], np.random.rand(8, 7, 6, 5)),
-            turn=(["month", "time", "state"], np.random.rand(8, 7, 5)),
-            river=(["month", "suit"], np.random.rand(8, 4)),
+            asset=(["month", "time", "people", "state"], np.random.rand(8, 7, 6, 5)),
+            liability=(["month", "time", "state"], np.random.rand(8, 7, 5)),
+            equity=(["month", "suit"], np.random.rand(8, 4)),
         ),
         coords=dict(
             month=["January", "February", "March", "April", "May", "June", "July", "August"],
