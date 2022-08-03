@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import tensorly as tl
 from tensorly.cp_tensor import CPTensor
-from numpy.linalg import lstsq
+from numpy.linalg import lstsq, norm
 from tqdm import tqdm
 
 def genSample():
@@ -36,8 +36,8 @@ def calcR2X_TnB(tIn, tRecon):
     """ Calculate the top and bottom part of R2X formula separately """
     tMask = np.isfinite(tIn)
     tIn = np.nan_to_num(tIn)
-    vTop = np.linalg.norm(tRecon * tMask - tIn) ** 2.0
-    vBottom = np.linalg.norm(tIn) ** 2.0
+    vTop = norm(tRecon * tMask - tIn) ** 2.0
+    vBottom = norm(tIn) ** 2.0
     return vTop, vBottom
 
 
@@ -146,8 +146,8 @@ class CoupledTensor():
                 sol = lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, rcond=None)[0].T
                 for dvars in self.data_vars:
                     if mmode in self.dims[dvars]:
-                        self.x["*Weight"].loc[dvars] *= np.linalg.norm(sol, axis=0)
-                self.x["#"+mmode][:] = sol / np.linalg.norm(sol, axis=0)
+                        self.x["*Weight"].loc[dvars] *= norm(sol, axis=0)
+                self.x["#"+mmode][:] = sol / norm(sol, axis=0)
 
             current_R2X = self.calcR2X()
             #print([self.calcR2X(dvars) for dvars in self.data_vars])
@@ -156,14 +156,15 @@ class CoupledTensor():
                 break
             old_R2X = current_R2X
 
-    def plot_weights(self, reorder=[]):
-        # TODO: import reorder_table() from another file
+
+    def plot_factors(self, reorder=[]):
+        """ Plot the factors of each mode """
         from matplotlib import gridspec, pyplot as plt
         import seaborn as sns
         import scipy.cluster.hierarchy as sch
+        from .xplots import reorder_table
 
         ddims = len(self.data_coords)
-
         factors = [self.x['#'+mode].to_pandas() for mode in self.data_coords]
 
         for r_ax in reorder:
@@ -174,6 +175,8 @@ class CoupledTensor():
                 assert r_ax in self.data_coords
                 rr = self.data_coords.index(r_ax)
                 factors[rr] = reorder_table(factors[rr])
+            else:
+                raise TypeError("reorder only takes a list of int's or str's.")
 
         f = plt.figure(figsize=(5 * ddims, 6))
         gs = gridspec.GridSpec(1, ddims, wspace=0.5)
@@ -184,7 +187,8 @@ class CoupledTensor():
             sns.heatmap(factors[rr], cmap="PiYG", center=0, xticklabels=comp_labels, yticklabels=factors[rr].index,
                         cbar=True, vmin=-1.0, vmax=1.0, ax=axes[rr])
             axes[rr].set_xlabel("Components")
-            axes[rr].set_title(self.data_coords[rr])
+            axes[rr].set_ylabel(None)
+            axes[rr].set_title(self.data_coords[rr].capitalize())
         return f, axes
 
 
