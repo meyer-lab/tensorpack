@@ -156,7 +156,36 @@ class CoupledTensor():
                 break
             old_R2X = current_R2X
 
+    def plot_weights(self, reorder=[]):
+        # TODO: import reorder_table() from another file
+        from matplotlib import gridspec, pyplot as plt
+        import seaborn as sns
+        import scipy.cluster.hierarchy as sch
 
+        ddims = len(self.data_coords)
+
+        factors = [self.x['#'+mode].to_pandas() for mode in self.data_coords]
+
+        for r_ax in reorder:
+            if isinstance(r_ax, int):
+                assert r_ax < ddims
+                factors[r_ax] = reorder_table(factors[r_ax])
+            elif isinstance(r_ax, str):
+                assert r_ax in self.data_coords
+                rr = self.data_coords.index(r_ax)
+                factors[rr] = reorder_table(factors[rr])
+
+        f = plt.figure(figsize=(5 * ddims, 6))
+        gs = gridspec.GridSpec(1, ddims, wspace=0.5)
+        axes = [plt.subplot(gs[rr]) for rr in range(ddims)]
+        comp_labels = [str(ii + 1) for ii in range(self.rank)]
+
+        for rr in range(ddims):
+            sns.heatmap(factors[rr], cmap="PiYG", center=0, xticklabels=comp_labels, yticklabels=factors[rr].index,
+                        cbar=True, vmin=-1.0, vmax=1.0, ax=axes[rr])
+            axes[rr].set_xlabel("Components")
+            axes[rr].set_title(self.data_coords[rr])
+        return f, axes
 
 
 
