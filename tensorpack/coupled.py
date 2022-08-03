@@ -3,12 +3,13 @@ import numpy as np
 import pandas as pd
 import tensorly as tl
 from tensorly.cp_tensor import CPTensor
+from numpy.linalg import lstsq
 from tqdm import tqdm
 
 def genSample():
     return xr.Dataset(
         data_vars=dict(
-            flop=(["month", "time", "people", "state"], np.random.rand(8, 7, 6, 5)),
+            vlop=(["month", "time", "people", "state"], np.random.rand(8, 7, 6, 5)),
             turn=(["month", "time", "state"], np.random.rand(8, 7, 5)),
             river=(["month", "suit"], np.random.rand(8, 4)),
         ),
@@ -62,6 +63,8 @@ class CoupledTensor():
         )
         self.data = data
         self.rank = rank
+        self.data_vars = list(self.data.data_vars)
+        self.data_coords = list(self.data.dims)
         self.dims = {a: dd["data_vars"][a]['dims'] for a in dd["data_vars"]}
         self.unfold = {mmode: xr_unfold(data, mmode) for mmode in list(data.coords)}
 
@@ -69,11 +72,11 @@ class CoupledTensor():
     def initialize(self, method="svd"):
         """ Initialize each mode factor matrix """
         if method == "ones":
-            for mmode in list(self.data.dims):
+            for mmode in self.data_coords:
                 self.x["#"+mmode][:] = np.ones_like(self.x["#"+mmode])
         if method == "svd":
             ## TODO: add missing data handling here
-            for mmode in list(self.data.dims):
+            for mmode in self.data_coords:
                 self.x["#" + mmode][:, :min(self.rank, len(self.x[mmode]))] = np.linalg.svd(self.unfold[mmode])[0][:,
                                                                          :min(self.rank, len(self.x[mmode]))]
         self.x["*Weight"][:] = np.ones_like(self.x["*Weight"])
@@ -81,7 +84,7 @@ class CoupledTensor():
 
     def to_CPTensor(self, dvars: str):
         """ Return a CPTensor object that is the factorized version of dvars """
-        assert dvars in self.dims
+        assert dvars in self.data_vars
         return CPTensor((self.x["*Weight"].loc[dvars, :].to_numpy(),
                             [self.x["#" + mmode].to_numpy() for mmode in self.dims[dvars]]))
 
@@ -89,13 +92,13 @@ class CoupledTensor():
         """ Calculate the R2X of dvars decomposition. If dvars not provide, calculate the overall R2X"""
         if dvars is None:    # find overall R2X
             vTop, vBottom = 0.0, 0.0
-            for dvars in self.dims:
+            for dvars in self.data_vars:
                 top, bot = calcR2X_TnB(self.data[dvars].to_numpy(), self.to_CPTensor(dvars).to_tensor())
                 vTop += top
                 vBottom += bot
             return 1.0 - vTop / vBottom
 
-        assert dvars in self.dims
+        assert dvars in self.data_vars
         vTop, vBottom = calcR2X_TnB(self.data[dvars].to_numpy(), self.to_CPTensor(dvars).to_tensor())
         return 1.0 - vTop / vBottom
 
@@ -104,7 +107,7 @@ class CoupledTensor():
         if dvars is None:  # return the entire xr.Dataset
             ndata = {}
             R2Xs = {}
-            for dvars in list(self.data.data_dvars):
+            for dvars in self.data_vars:
                 ndata[dvars] = (self.dims[dvars], self.to_CPTensor(dvars).to_tensor())
                 R2Xs[dvars] = self.calcR2X(dvars)     # a bit redundant, but more beautiful
             return xr.Dataset(
@@ -114,7 +117,7 @@ class CoupledTensor():
             )
 
         # return just one xr.DataArray
-        assert dvars in self.dims
+        assert dvars in self.data_vars
         return xr.DataArray(
             data=self.to_CPTensor(dvars).to_tensor(),
             coords={mmode: self.data[mmode].to_numpy() for mmode in self.dims[dvars]},
@@ -123,26 +126,32 @@ class CoupledTensor():
         )
 
     def khatri_rao(self, mode: str):
-        ## TODO: test if everything works when data_vars name are not naturally in alphabetically order
-        assert mode in self.data.coords
+        """ Find the Khatri-Rao product on a certain mode after concatenation """
+        assert mode in self.data_coords
         arrs = []  # save kr-ed arrays
-        for dvars in list(self.data.data_vars.keys()):
+        for dvars in self.data_vars:
             if mode in self.dims[dvars]:
                 arrs.append(tl.tenalg.khatri_rao([self.x["#"+mmode].to_numpy() for mmode in self.dims[dvars] if mmode != mode]))
         return np.concatenate(arrs, axis=0)
 
 
-    def perform_CP(self, tol=1e-6, maxiter=50, progress=True):
+    def perform_CP(self, tol=1e-7, maxiter=100, progress=True):
         """ Perform CP-like coupled tensor factorization """
-
+        old_R2X = -np.inf
         tq = tqdm(range(maxiter), disable=(not progress))
         for i in tq:
             # Solve on each mode
-            tq.set_postfix(refresh=False)  #R2X=R2X, delta=R2X - R2X_last, refresh=False)
+            for mmode in self.data_coords:
+                # TODO: put all weights onto the weight matrix
+                self.x["#"+mmode][:] = lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, rcond=None)[0].T
 
-            np.linalg.lstsq(cpd.khatri_rao("month"), cpd.unfold["month"].T, rcond=None)[0]
+            current_R2X = self.calcR2X()
+            print([self.calcR2X(dvars) for dvars in self.data_vars])
+            tq.set_postfix(refresh=False, R2X=current_R2X, delta=current_R2X-old_R2X)
+            if np.abs(current_R2X-old_R2X) < tol:
+                break
+            old_R2X = current_R2X
 
-        pass
 
 
 
