@@ -8,11 +8,18 @@ import xarray as xr
 from ..coupled import CoupledTensor
 
 def genSample():
+    dasset = np.random.rand(8, 7, 6, 5)
+    dasset[np.random.rand(*dasset.shape) < 0.1] = np.nan
+    dliab = np.random.rand(8, 7, 5)
+    dliab[np.random.rand(*dliab.shape) < 0.1] = np.nan
+    dequity = np.random.rand(8, 4)
+    dequity[np.random.rand(*dequity.shape) < 0.1] = np.nan
+
     return xr.Dataset(
         data_vars=dict(
-            asset=(["month", "time", "people", "state"], np.random.rand(8, 7, 6, 5)),
-            liability=(["month", "time", "state"], np.random.rand(8, 7, 5)),
-            equity=(["month", "suit"], np.random.rand(8, 4)),
+            asset=(["month", "time", "people", "state"], dasset),
+            liability=(["month", "time", "state"], dliab),
+            equity=(["month", "suit"], dequity),
         ),
         coords=dict(
             month=["January", "February", "March", "April", "May", "June", "July", "August"],
