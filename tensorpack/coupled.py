@@ -4,6 +4,8 @@ import tensorly as tl
 from tensorly.cp_tensor import CPTensor
 from numpy.linalg import lstsq, norm
 from tqdm import tqdm
+from .SVD_impute import IterativeSVD
+from .cmtf import censored_lstsq
 
 
 def xr_unfold(data: xr.Dataset, mode: str):
@@ -28,27 +30,27 @@ class CoupledTensor():
     def __init__(self, data: xr.Dataset, rank):
         dd = data.to_dict()
 
-        ncoords = {}
-        for cdn in list(dd["coords"].keys()):
-            ncoords[cdn] = data.coords[cdn].to_numpy()
-        ncoords["_Component_"] = np.arange(1, rank + 1)
-        ncoords["_Data_"] = list(dd["data_vars"].keys())
+        self.data = data
+        self.rank = rank
+        self.dvars = list(self.data.data_vars)
+        self.modes = list(self.data.dims)
 
+        ncoords = {}
         ndata = {}
-        for dan in list(dd["dims"].keys()):
-            ndata["_" + dan] = ([dan, "_Component_"], np.ones((dd["dims"][dan], rank)))
-        ndata["_Weight_"] = (["_Data_", "_Component_"], np.ones((len(dd["data_vars"]), rank)))
+        for mode in self.modes:
+            ncoords[mode] = data.coords[mode].to_numpy()
+            ndata["_" + mode] = ([mode, "_Component_"], np.ones((dd["dims"][mode], rank)))
+        ncoords["_Component_"] = np.arange(1, rank + 1)
+        ncoords["_Data_"] = self.dvars
+        ndata["_Weight_"] = (["_Data_", "_Component_"], np.ones((len(self.dvars), rank)))
 
         self.x = xr.Dataset(
             data_vars=ndata,
             coords=ncoords,
             attrs=dict(),
         )
-        self.data = data
-        self.rank = rank
-        self.dvars = list(self.data.data_vars)
-        self.modes = list(self.data.dims)
-        self.dims = {a: dd["data_vars"][a]['dims'] for a in dd["data_vars"]}    # same as self.dvar_to_mode
+
+        self.dims = {a: dd["data_vars"][a]['dims'] for a in dd["data_vars"]}    # same idea as self.dvar_to_mode
         self.mode_to_dvar = {mode: tuple(dvar for dvar in self.dvars if mode in self.dims[dvar]) for mode in self.modes}
         self.unfold = {mode: xr_unfold(data, mode) for mode in self.modes}
 
@@ -59,10 +61,13 @@ class CoupledTensor():
             for mmode in self.modes:
                 self.x["_"+mmode][:] = np.ones_like(self.x["_"+mmode])
         if method == "svd":
-            ## TODO: add missing data handling here
             for mmode in self.modes:
-                self.x["_" + mmode][:, :min(self.rank, len(self.x[mmode]))] = \
-                    np.linalg.svd(self.unfold[mmode])[0][:,:min(self.rank, len(self.x[mmode]))]
+                unfold = self.unfold[mmode].copy()
+                ncol = min(self.rank, len(self.x[mmode]))
+                if np.sum(~np.isfinite(unfold)) > 0:
+                    si = IterativeSVD(ncol)
+                    unfold = si.fit_transform(unfold)
+                self.x["_"+mmode][:, :ncol] = np.linalg.svd(unfold)[0][:,:ncol]
         self.x["_Weight_"][:] = np.ones_like(self.x["_Weight_"])
 
 
@@ -70,7 +75,7 @@ class CoupledTensor():
         """ Return a CPTensor object that is the factorized version of dvar """
         assert dvar in self.dvars
         return CPTensor((self.x["_Weight_"].loc[dvar, :].to_numpy(),
-                            [self.x["_" + mmode].to_numpy() for mmode in self.dims[dvar]]))
+                            [self.x["_"+mmode].to_numpy() for mmode in self.dims[dvar]]))
 
     def calcR2X(self, dvar=None):
         """ Calculate the R2X of dvar decomposition. If dvar not provide, calculate the overall R2X"""
@@ -123,10 +128,21 @@ class CoupledTensor():
         """ Perform CP-like coupled tensor factorization """
         old_R2X = -np.inf
         tq = tqdm(range(maxiter), disable=(not progress))
+
+        # missing value handling
+        uniqueInfo = {}
+        containMissing = {}
+        for mmode in self.modes:
+            containMissing[mmode] = np.sum(~np.isfinite(self.unfold[mmode])) > 0
+            uniqueInfo[mmode] = np.unique(np.isfinite(self.unfold[mmode].T), axis=1, return_inverse=True)
+
         for i in tq:
             # Solve on each mode
             for mmode in self.modes:
-                sol = lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, rcond=None)[0].T
+                if containMissing[mmode]:
+                    sol = censored_lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode])
+                else:
+                    sol = lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, rcond=None)[0].T
                 for dvar in self.mode_to_dvar[mmode]:
                     self.x["_Weight_"].loc[dvar] *= norm(sol, axis=0)
                 self.x["_"+mmode][:] = sol / norm(sol, axis=0)
@@ -172,6 +188,4 @@ class CoupledTensor():
             axes[rr].set_ylabel(None)
             axes[rr].set_title(self.modes[rr].capitalize())
         return f, axes
-
-
 
