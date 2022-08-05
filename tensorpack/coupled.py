@@ -63,53 +63,54 @@ class CoupledTensor():
         )
         self.data = data
         self.rank = rank
-        self.data_vars = list(self.data.data_vars)
-        self.data_coords = list(self.data.dims)
-        self.dims = {a: dd["data_vars"][a]['dims'] for a in dd["data_vars"]}
-        self.unfold = {mmode: xr_unfold(data, mmode) for mmode in list(data.coords)}
+        self.dvars = list(self.data.data_vars)
+        self.modes = list(self.data.dims)
+        self.dims = {a: dd["data_vars"][a]['dims'] for a in dd["data_vars"]}    # same as self.dvar_to_mode
+        self.mode_to_dvar = {mode: tuple(dvar for dvar in self.dvars if mode in self.dims[dvar]) for mode in self.modes}
+        self.unfold = {mode: xr_unfold(data, mode) for mode in self.modes}
 
 
     def initialize(self, method="svd"):
         """ Initialize each mode factor matrix """
         if method == "ones":
-            for mmode in self.data_coords:
+            for mmode in self.modes:
                 self.x["#"+mmode][:] = np.ones_like(self.x["#"+mmode])
         if method == "svd":
             ## TODO: add missing data handling here
-            for mmode in self.data_coords:
-                self.x["#" + mmode][:, :min(self.rank, len(self.x[mmode]))] = np.linalg.svd(self.unfold[mmode])[0][:,
-                                                                         :min(self.rank, len(self.x[mmode]))]
+            for mmode in self.modes:
+                self.x["#" + mmode][:, :min(self.rank, len(self.x[mmode]))] = \
+                    np.linalg.svd(self.unfold[mmode])[0][:,:min(self.rank, len(self.x[mmode]))]
         self.x["*Weight"][:] = np.ones_like(self.x["*Weight"])
 
 
-    def to_CPTensor(self, dvars: str):
-        """ Return a CPTensor object that is the factorized version of dvars """
-        assert dvars in self.data_vars
-        return CPTensor((self.x["*Weight"].loc[dvars, :].to_numpy(),
-                            [self.x["#" + mmode].to_numpy() for mmode in self.dims[dvars]]))
+    def to_CPTensor(self, dvar: str):
+        """ Return a CPTensor object that is the factorized version of dvar """
+        assert dvar in self.dvars
+        return CPTensor((self.x["*Weight"].loc[dvar, :].to_numpy(),
+                            [self.x["#" + mmode].to_numpy() for mmode in self.dims[dvar]]))
 
-    def calcR2X(self, dvars=None):
-        """ Calculate the R2X of dvars decomposition. If dvars not provide, calculate the overall R2X"""
-        if dvars is None:    # find overall R2X
+    def calcR2X(self, dvar=None):
+        """ Calculate the R2X of dvar decomposition. If dvar not provide, calculate the overall R2X"""
+        if dvar is None:    # find overall R2X
             vTop, vBottom = 0.0, 0.0
-            for dvars in self.data_vars:
-                top, bot = calcR2X_TnB(self.data[dvars].to_numpy(), self.to_CPTensor(dvars).to_tensor())
+            for dvar in self.dvars:
+                top, bot = calcR2X_TnB(self.data[dvar].to_numpy(), self.to_CPTensor(dvar).to_tensor())
                 vTop += top
                 vBottom += bot
             return 1.0 - vTop / vBottom
 
-        assert dvars in self.data_vars
-        vTop, vBottom = calcR2X_TnB(self.data[dvars].to_numpy(), self.to_CPTensor(dvars).to_tensor())
+        assert dvar in self.dvars
+        vTop, vBottom = calcR2X_TnB(self.data[dvar].to_numpy(), self.to_CPTensor(dvar).to_tensor())
         return 1.0 - vTop / vBottom
 
-    def reconstruct(self, dvars=None):
-        """ Put decomposed factors back into an xr.DataArray (when specify dvars name) or and xr.Dataset """
-        if dvars is None:  # return the entire xr.Dataset
+    def reconstruct(self, dvar=None):
+        """ Put decomposed factors back into an xr.DataArray (when specify dvar name) or and xr.Dataset """
+        if dvar is None:  # return the entire xr.Dataset
             ndata = {}
             R2Xs = {}
-            for dvars in self.data_vars:
-                ndata[dvars] = (self.dims[dvars], self.to_CPTensor(dvars).to_tensor())
-                R2Xs[dvars] = self.calcR2X(dvars)     # a bit redundant, but more beautiful
+            for dvar in self.dvars:
+                ndata[dvar] = (self.dims[dvar], self.to_CPTensor(dvar).to_tensor())
+                R2Xs[dvar] = self.calcR2X(dvar)     # a bit redundant, but more beautiful
             return xr.Dataset(
                 data_vars=ndata,
                 coords=self.data.coords,
@@ -117,40 +118,39 @@ class CoupledTensor():
             )
 
         # return just one xr.DataArray
-        assert dvars in self.data_vars
+        assert dvar in self.dvars
         return xr.DataArray(
-            data=self.to_CPTensor(dvars).to_tensor(),
-            coords={mmode: self.data[mmode].to_numpy() for mmode in self.dims[dvars]},
-            name=dvars,
-            attrs=dict(R2X = self.calcR2X(dvars)),
+            data=self.to_CPTensor(dvar).to_tensor(),
+            coords={mmode: self.data[mmode].to_numpy() for mmode in self.dims[dvar]},
+            name=dvar,
+            attrs=dict(R2X = self.calcR2X(dvar)),
         )
 
     def khatri_rao(self, mode: str):
         """ Find the Khatri-Rao product on a certain mode after concatenation """
-        assert mode in self.data_coords
+        assert mode in self.modes
         arrs = []  # save kr-ed arrays
-        for dvars in self.data_vars:
-            if mode in self.dims[dvars]:
-                recon = tl.tenalg.khatri_rao([self.x["#"+mmode].to_numpy() for mmode in self.dims[dvars] if mmode != mode])
-                arrs.append(recon * self.x["*Weight"].loc[dvars].to_numpy())    # put weights back to kr
+        for dvar in self.mode_to_dvar[mode]:
+            recon = tl.tenalg.khatri_rao([self.x["#"+mmode].to_numpy() for mmode in self.dims[dvar] if mmode != mode])
+            arrs.append(recon * self.x["*Weight"].loc[dvar].to_numpy())    # put weights back to kr
         return np.concatenate(arrs, axis=0)
 
 
-    def perform_CP(self, tol=1e-7, maxiter=100, progress=True):
+    def perform_CP(self, tol=1e-7, maxiter=500, progress=True, verbose=False):
         """ Perform CP-like coupled tensor factorization """
         old_R2X = -np.inf
         tq = tqdm(range(maxiter), disable=(not progress))
         for i in tq:
             # Solve on each mode
-            for mmode in self.data_coords:
+            for mmode in self.modes:
                 sol = lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, rcond=None)[0].T
-                for dvars in self.data_vars:
-                    if mmode in self.dims[dvars]:
-                        self.x["*Weight"].loc[dvars] *= norm(sol, axis=0)
+                for dvar in self.mode_to_dvar[mmode]:
+                    self.x["*Weight"].loc[dvar] *= norm(sol, axis=0)
                 self.x["#"+mmode][:] = sol / norm(sol, axis=0)
 
             current_R2X = self.calcR2X()
-            #print([self.calcR2X(dvars) for dvars in self.data_vars])
+            if verbose:
+                print(f"R2Xs at {i}: {[self.calcR2X(dvar) for dvar in self.dvars]}")
             tq.set_postfix(refresh=False, R2X=current_R2X, delta=current_R2X-old_R2X)
             if np.abs(current_R2X-old_R2X) < tol:
                 break
@@ -161,19 +161,18 @@ class CoupledTensor():
         """ Plot the factors of each mode """
         from matplotlib import gridspec, pyplot as plt
         import seaborn as sns
-        import scipy.cluster.hierarchy as sch
         from .xplots import reorder_table
 
-        ddims = len(self.data_coords)
-        factors = [self.x['#'+mode].to_pandas() for mode in self.data_coords]
+        ddims = len(self.modes)
+        factors = [self.x['#'+mode].to_pandas() for mode in self.modes]
 
         for r_ax in reorder:
             if isinstance(r_ax, int):
                 assert r_ax < ddims
                 factors[r_ax] = reorder_table(factors[r_ax])
             elif isinstance(r_ax, str):
-                assert r_ax in self.data_coords
-                rr = self.data_coords.index(r_ax)
+                assert r_ax in self.modes
+                rr = self.modes.index(r_ax)
                 factors[rr] = reorder_table(factors[rr])
             else:
                 raise TypeError("reorder only takes a list of int's or str's.")
@@ -188,7 +187,7 @@ class CoupledTensor():
                         cbar=True, vmin=-1.0, vmax=1.0, ax=axes[rr])
             axes[rr].set_xlabel("Components")
             axes[rr].set_ylabel(None)
-            axes[rr].set_title(self.data_coords[rr].capitalize())
+            axes[rr].set_title(self.modes[rr].capitalize())
         return f, axes
 
 
