@@ -7,8 +7,6 @@ import pandas as pd
 import seaborn as sns
 from matplotlib.ticker import ScalarFormatter
 from .decomposition import Decomposition
-from tensorpack import perform_CP
-import seaborn as sns
 
 def tfacr2x(ax, decomp:Decomposition):
     """

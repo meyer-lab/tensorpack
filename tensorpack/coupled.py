@@ -1,26 +1,9 @@
 import xarray as xr
 import numpy as np
-import pandas as pd
 import tensorly as tl
 from tensorly.cp_tensor import CPTensor
 from numpy.linalg import lstsq, norm
 from tqdm import tqdm
-
-def genSample():
-    return xr.Dataset(
-        data_vars=dict(
-            asset=(["month", "time", "people", "state"], np.random.rand(8, 7, 6, 5)),
-            liability=(["month", "time", "state"], np.random.rand(8, 7, 5)),
-            equity=(["month", "suit"], np.random.rand(8, 4)),
-        ),
-        coords=dict(
-            month=["January", "February", "March", "April", "May", "June", "July", "August"],
-            time=pd.date_range("2014-09-06", periods=7),
-            people=["Liam", "Olivia", "Noah", "Emma", "Benjamin", "Charlotte"],
-            state=["Ohio", "Tennessee", "Utah", "Virginia", "Wyoming"],
-            suit=["Spade", "Heart", "Club", "Diamond"]
-        ),
-    )
 
 
 def xr_unfold(data: xr.Dataset, mode: str):
