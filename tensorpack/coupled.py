@@ -12,8 +12,8 @@ def xr_unfold(data: xr.Dataset, mode: str):
     """ Generate the flatten array along the mode axis """
     arrs = []  # save flattened arrays
     for _, da in data.data_vars.items():
-        if mode in da.coords:
-            arrs.append(tl.unfold(da.to_numpy(), list(da.coords).index(mode)))  # unfold
+        if mode in da.dims:
+            arrs.append(tl.unfold(da.to_numpy(), list(da.dims).index(mode)))  # unfold
     return np.concatenate(arrs, axis=1)
 
 
@@ -55,19 +55,24 @@ class CoupledTensor():
         self.unfold = {mode: xr_unfold(data, mode) for mode in self.modes}
 
 
-    def initialize(self, method="svd"):
+    def initialize(self, method="svd", verbose=False):
         """ Initialize each mode factor matrix """
         if method == "ones":
             for mmode in self.modes:
                 self.x["_"+mmode][:] = np.ones_like(self.x["_"+mmode])
         if method == "svd":
+            import time
             for mmode in self.modes:
+                start_time = time.time()
                 unfold = self.unfold[mmode].copy()
                 ncol = min(self.rank, len(self.x[mmode]))
                 if np.sum(~np.isfinite(unfold)) > 0:
-                    si = IterativeSVD(ncol)
-                    unfold = si.fit_transform(unfold)
+                    si = IterativeSVD(ncol, max_iters=50)
+                    unfold = si.fit_transform(unfold[:, ~np.all(np.isnan(unfold), axis=0)])
+                    ncol = min(ncol, unfold.shape[1])   # case where num col in reduced unfold is even smaller
                 self.x["_"+mmode][:, :ncol] = np.linalg.svd(unfold)[0][:,:ncol]
+                if verbose:
+                    print(f"{mmode} SVD initialization: done in {time.time() - start_time}")
         self.x["_Weight_"][:] = np.ones_like(self.x["_Weight_"])
 
 
@@ -155,23 +160,31 @@ class CoupledTensor():
                 break
             old_R2X = current_R2X
 
+    ## TODO: flip signs to make most components positive
+    ## TODO: sort components based on (1) weights (2) clustering
 
-    def plot_factors(self, reorder=[]):
-        """ Plot the factors of each mode """
+
+    def plot_factors(self, dvar=None, reorder=[], normalize=True):
+        """ Plot the factors of each mode. If dvar not specified, plot all """
         from matplotlib import gridspec, pyplot as plt
         import seaborn as sns
         from .xplots import reorder_table
 
-        ddims = len(self.modes)
-        factors = [self.x["_"+mode].to_pandas() for mode in self.modes]
+        modes = self.modes if dvar is None else self.dims[dvar]
+        ddims = len(modes)
+        factors = [self.x["_"+mode].to_pandas() for mode in modes]
+
+        if normalize:
+            for i in range(len(factors)):
+                factors[i] /= np.linalg.norm(factors[i], ord=np.inf, axis=0)
 
         for r_ax in reorder:
             if isinstance(r_ax, int):
                 assert r_ax < ddims
                 factors[r_ax] = reorder_table(factors[r_ax])
             elif isinstance(r_ax, str):
-                assert r_ax in self.modes
-                rr = self.modes.index(r_ax)
+                assert r_ax in modes
+                rr = modes.index(r_ax)
                 factors[rr] = reorder_table(factors[rr])
             else:
                 raise TypeError("reorder only takes a list of int's or str's.")
@@ -186,6 +199,6 @@ class CoupledTensor():
                         cbar=True, vmin=-1.0, vmax=1.0, ax=axes[rr])
             axes[rr].set_xlabel("Components")
             axes[rr].set_ylabel(None)
-            axes[rr].set_title(self.modes[rr].capitalize())
+            axes[rr].set_title(modes[rr])
         return f, axes
 
