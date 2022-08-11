@@ -148,9 +148,10 @@ class CoupledTensor():
                     sol = censored_lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode])
                 else:
                     sol = lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, rcond=None)[0].T
+                norm_vec = norm(sol, axis=0)
                 for dvar in self.mode_to_dvar[mmode]:
-                    self.x["_Weight_"].loc[dvar] *= norm(sol, axis=0)
-                self.x["_"+mmode][:] = sol / norm(sol, axis=0)
+                    self.x["_Weight_"].loc[dvar] *= norm_vec
+                self.x["_"+mmode][:] = sol / norm_vec
 
             current_R2X = self.calcR2X()
             if verbose:
@@ -160,11 +161,25 @@ class CoupledTensor():
                 break
             old_R2X = current_R2X
 
-    ## TODO: flip signs to make most components positive
-    ## TODO: sort components based on (1) weights (2) clustering
+        self.normalize_factors("max")
+
+    def normalize_factors(self, method="max"):
+        current_R2X = self.calcR2X()
+        # Normalize factors
+        for mmode in self.modes:
+            sol = self.x["_" + mmode]
+            norm_vec = np.ones((sol.shape[1]))
+            if method == "max":
+                norm_vec = np.array([max(sol[:, ii].min(), sol[:, ii].max(), key=abs) for ii in range(sol.shape[1])])
+            elif method == "norm":
+                norm_vec = norm(sol, axis=0)
+            for dvar in self.mode_to_dvar[mmode]:
+                self.x["_Weight_"].loc[dvar] *= norm_vec
+            self.x["_" + mmode][:] /= norm_vec
+        assert current_R2X == self.calcR2X(), "normalize_factors() causes R2X change"
 
 
-    def plot_factors(self, dvar=None, reorder=[], normalize=True):
+    def plot_factors(self, dvar=None, reorder=[], sort_comps=True):
         """ Plot the factors of each mode. If dvar not specified, plot all """
         from matplotlib import gridspec, pyplot as plt
         import seaborn as sns
@@ -174,9 +189,12 @@ class CoupledTensor():
         ddims = len(modes)
         factors = [self.x["_"+mode].to_pandas() for mode in modes]
 
-        if normalize:
-            for i in range(len(factors)):
-                factors[i] /= np.linalg.norm(factors[i], ord=np.inf, axis=0)
+        if sort_comps:   # sort components based on weights
+            if dvar is None:
+                comp_order = np.argsort(norm(self.x["_Weight_"], axis=0))[::-1]
+            else:
+                comp_order = np.argsort(np.abs(self.x["_Weight_"].loc[dvar].to_numpy()))[::-1]
+            factors = [ff.iloc[:, comp_order] for ff in factors]
 
         for r_ax in reorder:
             if isinstance(r_ax, int):
@@ -192,7 +210,10 @@ class CoupledTensor():
         f = plt.figure(figsize=(5 * ddims, 6))
         gs = gridspec.GridSpec(1, ddims, wspace=0.5)
         axes = [plt.subplot(gs[rr]) for rr in range(ddims)]
-        comp_labels = [str(ii + 1) for ii in range(self.rank)]
+        comp_labels = factors[0].keys()
+        if dvar is not None:
+            ws = self.x["_Weight_"].loc[dvar][comp_order] if sort_comps else self.x["_Weight_"].loc[dvar]
+            f.suptitle(f"{dvar} Decomposition | R2X = {self.calcR2X(dvar):.4f} \nWeights = {ws.to_numpy().round()}")
 
         for rr in range(ddims):
             sns.heatmap(factors[rr], cmap="PiYG", center=0, xticklabels=comp_labels, yticklabels=factors[rr].index,
