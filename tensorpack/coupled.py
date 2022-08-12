@@ -176,7 +176,8 @@ class CoupledTensor():
             for dvar in self.mode_to_dvar[mmode]:
                 self.x["_Weight_"].loc[dvar] *= norm_vec
             self.x["_" + mmode][:] /= norm_vec
-        assert current_R2X == self.calcR2X(), "normalize_factors() causes R2X change"
+        assert abs(current_R2X - self.calcR2X()) / current_R2X < 1e-6, \
+            f"normalize_factors() causes R2X change: {current_R2X} to {self.calcR2X()}"
 
 
     def plot_factors(self, dvar=None, reorder=[], sort_comps=True):
@@ -212,8 +213,8 @@ class CoupledTensor():
         axes = [plt.subplot(gs[rr]) for rr in range(ddims)]
         comp_labels = factors[0].keys()
         if dvar is not None:
-            ws = self.x["_Weight_"].loc[dvar][comp_order] if sort_comps else self.x["_Weight_"].loc[dvar]
-            f.suptitle(f"{dvar} Decomposition | R2X = {self.calcR2X(dvar):.4f} \nWeights = {ws.to_numpy().round()}")
+            #ws = self.x["_Weight_"].loc[dvar][comp_order] if sort_comps else self.x["_Weight_"].loc[dvar]
+            f.suptitle(f"{dvar} Decomposition (R2X = {self.calcR2X(dvar):.4f})")
 
         for rr in range(ddims):
             sns.heatmap(factors[rr], cmap="PiYG", center=0, xticklabels=comp_labels, yticklabels=factors[rr].index,
