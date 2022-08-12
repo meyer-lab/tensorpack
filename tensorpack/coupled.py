@@ -12,8 +12,8 @@ def xr_unfold(data: xr.Dataset, mode: str):
     """ Generate the flatten array along the mode axis """
     arrs = []  # save flattened arrays
     for _, da in data.data_vars.items():
-        if mode in da.coords:
-            arrs.append(tl.unfold(da.to_numpy(), list(da.coords).index(mode)))  # unfold
+        if mode in da.dims:
+            arrs.append(tl.unfold(da.to_numpy(), list(da.dims).index(mode)))  # unfold
     return np.concatenate(arrs, axis=1)
 
 
@@ -55,19 +55,24 @@ class CoupledTensor():
         self.unfold = {mode: xr_unfold(data, mode) for mode in self.modes}
 
 
-    def initialize(self, method="svd"):
+    def initialize(self, method="svd", verbose=False):
         """ Initialize each mode factor matrix """
         if method == "ones":
             for mmode in self.modes:
                 self.x["_"+mmode][:] = np.ones_like(self.x["_"+mmode])
         if method == "svd":
+            import time
             for mmode in self.modes:
+                start_time = time.time()
                 unfold = self.unfold[mmode].copy()
                 ncol = min(self.rank, len(self.x[mmode]))
                 if np.sum(~np.isfinite(unfold)) > 0:
-                    si = IterativeSVD(ncol)
-                    unfold = si.fit_transform(unfold)
+                    si = IterativeSVD(ncol, max_iters=50)
+                    unfold = si.fit_transform(unfold[:, ~np.all(np.isnan(unfold), axis=0)])
+                    ncol = min(ncol, unfold.shape[1])   # case where num col in reduced unfold is even smaller
                 self.x["_"+mmode][:, :ncol] = np.linalg.svd(unfold)[0][:,:ncol]
+                if verbose:
+                    print(f"{mmode} SVD initialization: done in {time.time() - start_time}")
         self.x["_Weight_"][:] = np.ones_like(self.x["_Weight_"])
 
 
@@ -143,9 +148,10 @@ class CoupledTensor():
                     sol = censored_lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode])
                 else:
                     sol = lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, rcond=None)[0].T
+                norm_vec = norm(sol, axis=0)
                 for dvar in self.mode_to_dvar[mmode]:
-                    self.x["_Weight_"].loc[dvar] *= norm(sol, axis=0)
-                self.x["_"+mmode][:] = sol / norm(sol, axis=0)
+                    self.x["_Weight_"].loc[dvar] *= norm_vec
+                self.x["_"+mmode][:] = sol / norm_vec
 
             current_R2X = self.calcR2X()
             if verbose:
@@ -155,23 +161,49 @@ class CoupledTensor():
                 break
             old_R2X = current_R2X
 
+        self.normalize_factors("max")
 
-    def plot_factors(self, reorder=[]):
-        """ Plot the factors of each mode """
+    def normalize_factors(self, method="max"):
+        current_R2X = self.calcR2X()
+        # Normalize factors
+        for mmode in self.modes:
+            sol = self.x["_" + mmode]
+            norm_vec = np.ones((sol.shape[1]))
+            if method == "max":
+                norm_vec = np.array([max(sol[:, ii].min(), sol[:, ii].max(), key=abs) for ii in range(sol.shape[1])])
+            elif method == "norm":
+                norm_vec = norm(sol, axis=0)
+            for dvar in self.mode_to_dvar[mmode]:
+                self.x["_Weight_"].loc[dvar] *= norm_vec
+            self.x["_" + mmode][:] /= norm_vec
+        assert abs(current_R2X - self.calcR2X()) / current_R2X < 1e-6, \
+            f"normalize_factors() causes R2X change: {current_R2X} to {self.calcR2X()}"
+
+
+    def plot_factors(self, dvar=None, reorder=[], sort_comps=True):
+        """ Plot the factors of each mode. If dvar not specified, plot all """
         from matplotlib import gridspec, pyplot as plt
         import seaborn as sns
         from .xplots import reorder_table
 
-        ddims = len(self.modes)
-        factors = [self.x["_"+mode].to_pandas() for mode in self.modes]
+        modes = self.modes if dvar is None else self.dims[dvar]
+        ddims = len(modes)
+        factors = [self.x["_"+mode].to_pandas() for mode in modes]
+
+        if sort_comps:   # sort components based on weights
+            if dvar is None:
+                comp_order = np.argsort(norm(self.x["_Weight_"], axis=0))[::-1]
+            else:
+                comp_order = np.argsort(np.abs(self.x["_Weight_"].loc[dvar].to_numpy()))[::-1]
+            factors = [ff.iloc[:, comp_order] for ff in factors]
 
         for r_ax in reorder:
             if isinstance(r_ax, int):
                 assert r_ax < ddims
                 factors[r_ax] = reorder_table(factors[r_ax])
             elif isinstance(r_ax, str):
-                assert r_ax in self.modes
-                rr = self.modes.index(r_ax)
+                assert r_ax in modes
+                rr = modes.index(r_ax)
                 factors[rr] = reorder_table(factors[rr])
             else:
                 raise TypeError("reorder only takes a list of int's or str's.")
@@ -179,13 +211,16 @@ class CoupledTensor():
         f = plt.figure(figsize=(5 * ddims, 6))
         gs = gridspec.GridSpec(1, ddims, wspace=0.5)
         axes = [plt.subplot(gs[rr]) for rr in range(ddims)]
-        comp_labels = [str(ii + 1) for ii in range(self.rank)]
+        comp_labels = factors[0].keys()
+        if dvar is not None:
+            #ws = self.x["_Weight_"].loc[dvar][comp_order] if sort_comps else self.x["_Weight_"].loc[dvar]
+            f.suptitle(f"{dvar} Decomposition (R2X = {self.calcR2X(dvar):.4f})")
 
         for rr in range(ddims):
             sns.heatmap(factors[rr], cmap="PiYG", center=0, xticklabels=comp_labels, yticklabels=factors[rr].index,
                         cbar=True, vmin=-1.0, vmax=1.0, ax=axes[rr])
             axes[rr].set_xlabel("Components")
             axes[rr].set_ylabel(None)
-            axes[rr].set_title(self.modes[rr].capitalize())
+            axes[rr].set_title(modes[rr])
         return f, axes
 
