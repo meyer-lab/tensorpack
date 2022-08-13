@@ -2,10 +2,10 @@ import xarray as xr
 import numpy as np
 import tensorly as tl
 from tensorly.cp_tensor import CPTensor
-from numpy.linalg import lstsq, norm
+from numpy.linalg import norm
 from tqdm import tqdm
 from .SVD_impute import IterativeSVD
-from .cmtf import censored_lstsq
+from .linalg import mlstsq
 
 
 def xr_unfold(data: xr.Dataset, mode: str):
@@ -136,18 +136,13 @@ class CoupledTensor():
 
         # missing value handling
         uniqueInfo = {}
-        containMissing = {}
         for mmode in self.modes:
-            containMissing[mmode] = np.sum(~np.isfinite(self.unfold[mmode])) > 0
             uniqueInfo[mmode] = np.unique(np.isfinite(self.unfold[mmode].T), axis=1, return_inverse=True)
 
         for i in tq:
             # Solve on each mode
             for mmode in self.modes:
-                if containMissing[mmode]:
-                    sol = censored_lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode])
-                else:
-                    sol = lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, rcond=None)[0].T
+                sol = mlstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode])[0].T
                 norm_vec = norm(sol, axis=0)
                 for dvar in self.mode_to_dvar[mmode]:
                     self.x["_Weight_"].loc[dvar] *= norm_vec

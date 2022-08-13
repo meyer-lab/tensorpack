@@ -10,6 +10,7 @@ from copy import deepcopy
 from tensorly.decomposition._cp import initialize_cp
 from tqdm import tqdm
 from .SVD_impute import IterativeSVD
+from .linalg import mlstsq
 
 
 tl.set_backend('numpy')
@@ -116,33 +117,6 @@ def delete_component(tFac, compNum):
     return tensor
 
 
-def censored_lstsq(A: np.ndarray, B: np.ndarray, uniqueInfo=None) -> np.ndarray:
-    """Solves least squares problem subject to missing data.
-    Note: uses a for loop over the missing patterns of B, leading to a
-    slower but more numerically stable algorithm
-    Args
-    ----
-    A (ndarray) : m x r matrix
-    B (ndarray) : m x n matrix
-    Returns
-    -------
-    X (ndarray) : r x n matrix that minimizes norm(M*(AX - B))
-    """
-    X = np.empty((A.shape[1], B.shape[1]))
-    # Missingness patterns
-    if uniqueInfo is None:
-        unique, uIDX = np.unique(np.isfinite(B), axis=1, return_inverse=True)
-    else:
-        unique, uIDX = uniqueInfo
-
-    for i in range(unique.shape[1]):
-        uI = uIDX == i
-        uu = np.squeeze(unique[:, i])
-
-        Bx = B[uu, :]
-        X[:, uI] = np.linalg.lstsq(A[uu, :], Bx[:, uI], rcond=-1)[0]
-    return X.T
-
 
 def cp_normalize(tFac):
     """ Normalize the factors using the inf norm. """
@@ -237,7 +211,7 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, callback=None):
         # Solve on each mode
         for m in range(len(tFac.factors)):
             kr = khatri_rao(tFac.factors, skip_matrix=m)
-            tFac.factors[m] = censored_lstsq(kr, unfolded[m].T, uniqueInfo[m])
+            tFac.factors[m] = mlstsq(kr, unfolded[m].T, uniqueInfo[m]).T
 
         R2X_last = tFac.R2X
         tFac.R2X = calcR2X(tFac, tOrig)
@@ -276,7 +250,7 @@ def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, progress=True):
     for _ in tq:
         for m in [1, 2]:
             kr = khatri_rao(tFac.factors, skip_matrix=m)
-            tFac.factors[m] = censored_lstsq(kr, tl.unfold(tOrig, m).T)
+            tFac.factors[m] = mlstsq(kr, tl.unfold(tOrig, m).T).T
 
         # Solve for the glycan matrix fit
         tFac.mFactor = np.linalg.lstsq(tFac.factors[0][missingM, :], mOrig[missingM, :], rcond=-1)[0].T
@@ -284,7 +258,7 @@ def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, progress=True):
         # Solve for subjects factors
         kr = khatri_rao(tFac.factors, skip_matrix=0)
         kr = np.vstack((kr, tFac.mFactor))
-        tFac.factors[0] = censored_lstsq(kr, unfolded.T, uniqueInfo)
+        tFac.factors[0] = mlstsq(kr, unfolded.T, uniqueInfo).T
 
         R2X_last = R2X
         R2X = calcR2X(tFac, tOrig, mOrig)
