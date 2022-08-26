@@ -18,7 +18,7 @@ def xr_unfold(data: xr.Dataset, mode: str):
 
 
 def calcR2X_TnB(tIn, tRecon):
-    """ Calculate the top and bottom part of R2X formula separately """
+    """ Calculate the top and bottom part of R2X formula separately, ignore NaN """
     tMask = np.isfinite(tIn)
     tIn = np.nan_to_num(tIn)
     vTop = norm(tRecon * tMask - tIn) ** 2.0
@@ -82,7 +82,7 @@ class CoupledTensor():
         return CPTensor((self.x["_Weight_"].loc[dvar, :].to_numpy(),
                             [self.x["_"+mmode].to_numpy() for mmode in self.dims[dvar]]))
 
-    def calcR2X(self, dvar=None):
+    def R2X(self, dvar=None):
         """ Calculate the R2X of dvar decomposition. If dvar not provide, calculate the overall R2X"""
         if dvar is None:    # find overall R2X
             vTop, vBottom = 0.0, 0.0
@@ -93,6 +93,7 @@ class CoupledTensor():
             return 1.0 - vTop / vBottom
 
         assert dvar in self.dvars
+        ## TODO: add factor specific R2X here
         vTop, vBottom = calcR2X_TnB(self.data[dvar].to_numpy(), self.to_CPTensor(dvar).to_tensor())
         return 1.0 - vTop / vBottom
 
@@ -103,7 +104,7 @@ class CoupledTensor():
             R2Xs = {}
             for dvar in self.dvars:
                 ndata[dvar] = (self.dims[dvar], self.to_CPTensor(dvar).to_tensor())
-                R2Xs[dvar] = self.calcR2X(dvar)     # a bit redundant, but more beautiful
+                R2Xs[dvar] = self.R2X(dvar)     # a bit redundant, but more beautiful
             return xr.Dataset(
                 data_vars=ndata,
                 coords=self.data.coords,
@@ -116,7 +117,7 @@ class CoupledTensor():
             data=self.to_CPTensor(dvar).to_tensor(),
             coords={mmode: self.data[mmode].to_numpy() for mmode in self.dims[dvar]},
             name=dvar,
-            attrs=dict(R2X = self.calcR2X(dvar)),
+            attrs=dict(R2X = self.R2X(dvar)),
         )
 
     def khatri_rao(self, mode: str):
@@ -129,7 +130,7 @@ class CoupledTensor():
         return np.concatenate(arrs, axis=0)
 
 
-    def perform_CP(self, tol=1e-7, maxiter=500, progress=True, verbose=False):
+    def fit(self, tol=1e-7, maxiter=500, progress=True, verbose=False):
         """ Perform CP-like coupled tensor factorization """
         old_R2X = -np.inf
         tq = tqdm(range(maxiter), disable=(not progress))
@@ -153,9 +154,9 @@ class CoupledTensor():
                     self.x["_Weight_"].loc[dvar] *= norm_vec
                 self.x["_"+mmode][:] = sol / norm_vec
 
-            current_R2X = self.calcR2X()
+            current_R2X = self.R2X()
             if verbose:
-                print(f"R2Xs at {i}: {[self.calcR2X(dvar) for dvar in self.dvars]}")
+                print(f"R2Xs at {i}: {[self.R2X(dvar) for dvar in self.dvars]}")
             tq.set_postfix(refresh=False, R2X=current_R2X, delta=current_R2X-old_R2X)
             if np.abs(current_R2X-old_R2X) < tol:
                 break
@@ -164,7 +165,7 @@ class CoupledTensor():
         self.normalize_factors("max")
 
     def normalize_factors(self, method="max"):
-        current_R2X = self.calcR2X()
+        current_R2X = self.R2X()
         # Normalize factors
         for mmode in self.modes:
             sol = self.x["_" + mmode]
@@ -176,8 +177,8 @@ class CoupledTensor():
             for dvar in self.mode_to_dvar[mmode]:
                 self.x["_Weight_"].loc[dvar] *= norm_vec
             self.x["_" + mmode][:] /= norm_vec
-        assert abs(current_R2X - self.calcR2X()) / current_R2X < 1e-6, \
-            f"normalize_factors() causes R2X change: {current_R2X} to {self.calcR2X()}"
+        assert abs(current_R2X - self.R2X()) / current_R2X < 1e-6, \
+            f"normalize_factors() causes R2X change: {current_R2X} to {self.R2X()}"
 
 
     def plot_factors(self, dvar=None, reorder=[], sort_comps=True):
@@ -189,6 +190,15 @@ class CoupledTensor():
         modes = self.modes if dvar is None else self.dims[dvar]
         ddims = len(modes)
         factors = [self.x["_"+mode].to_pandas() for mode in modes]
+
+        if dvar is not None:
+            ## TODO: add asteroid after all NaN indices
+
+
+
+
+            #
+            pass
 
         if sort_comps:   # sort components based on weights
             if dvar is None:
@@ -213,8 +223,7 @@ class CoupledTensor():
         axes = [plt.subplot(gs[rr]) for rr in range(ddims)]
         comp_labels = factors[0].keys()
         if dvar is not None:
-            #ws = self.x["_Weight_"].loc[dvar][comp_order] if sort_comps else self.x["_Weight_"].loc[dvar]
-            f.suptitle(f"{dvar} Decomposition (R2X = {self.calcR2X(dvar):.4f})")
+            f.suptitle(f"{dvar} Decomposition (R2X = {self.R2X(dvar):.2f})")
 
         for rr in range(ddims):
             sns.heatmap(factors[rr], cmap="PiYG", center=0, xticklabels=comp_labels, yticklabels=factors[rr].index,

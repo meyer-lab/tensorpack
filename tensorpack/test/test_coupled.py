@@ -36,9 +36,9 @@ def test_generated_coupling():
     for r in np.arange(3,9,2):
         cpd = CoupledTensor(data, r)
         cpd.initialize()
-        cpd.perform_CP()
-        R2X = cpd.calcR2X()
+        cpd.fit()
+        R2X = cpd.R2X()
         assert oldR2X < R2X
         oldR2X = R2X
-        assert np.all(np.array([cpd.calcR2X(dvar) for dvar in cpd.dvars]) > 0.7)
+        assert np.all(np.array([cpd.R2X(dvar) for dvar in cpd.dvars]) > 0.7)
 
