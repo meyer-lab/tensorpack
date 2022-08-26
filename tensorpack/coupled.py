@@ -192,15 +192,17 @@ class CoupledTensor():
         factors = [self.x["_"+mode].to_pandas() for mode in modes]
 
         if dvar is not None:
-            ## TODO: add asteroid after all NaN indices
-
-
-
-
-            #
-            pass
+            dat = self.data[dvar]
+            ttdim = dat.ndim
+            assert len(factors) == ttdim
+            for m in range(ttdim):
+                no_include = np.all(np.isnan(dat), axis=tuple(np.delete(np.arange(ttdim), m)))
+                for (ii, val) in enumerate(no_include):
+                    if val:
+                        factors[m].index.values[ii] = f"({factors[m].index.values[ii]})*"
 
         if sort_comps:   # sort components based on weights
+            ## TODO: sort components by actual R2X instead
             if dvar is None:
                 comp_order = np.argsort(norm(self.x["_Weight_"], axis=0))[::-1]
             else:
