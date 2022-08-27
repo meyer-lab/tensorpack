@@ -76,13 +76,18 @@ class CoupledTensor():
         self.x["_Weight_"][:] = np.ones_like(self.x["_Weight_"])
 
 
-    def to_CPTensor(self, dvar: str):
+    def to_CPTensor(self, dvar: str, component=None):
         """ Return a CPTensor object that is the factorized version of dvar """
         assert dvar in self.dvars
+        if component is not None:
+            if isinstance(component, int):
+                component = [component]
+            return CPTensor((self.x["_Weight_"].loc[dvar, component].to_numpy(),
+                            [self.x["_"+mmode].loc[:, component].to_numpy() for mmode in self.dims[dvar]]))
         return CPTensor((self.x["_Weight_"].loc[dvar, :].to_numpy(),
                             [self.x["_"+mmode].to_numpy() for mmode in self.dims[dvar]]))
 
-    def R2X(self, dvar=None):
+    def R2X(self, dvar=None, component=None):
         """ Calculate the R2X of dvar decomposition. If dvar not provide, calculate the overall R2X"""
         if dvar is None:    # find overall R2X
             vTop, vBottom = 0.0, 0.0
@@ -93,8 +98,7 @@ class CoupledTensor():
             return 1.0 - vTop / vBottom
 
         assert dvar in self.dvars
-        ## TODO: add factor specific R2X here
-        vTop, vBottom = calcR2X_TnB(self.data[dvar].to_numpy(), self.to_CPTensor(dvar).to_tensor())
+        vTop, vBottom = calcR2X_TnB(self.data[dvar].to_numpy(), self.to_CPTensor(dvar, component=component).to_tensor())
         return 1.0 - vTop / vBottom
 
     def reconstruct(self, dvar=None):
@@ -202,7 +206,6 @@ class CoupledTensor():
                         factors[m].index.values[ii] = f"({factors[m].index.values[ii]})*"
 
         if sort_comps:   # sort components based on weights
-            ## TODO: sort components by actual R2X instead
             if dvar is None:
                 comp_order = np.argsort(norm(self.x["_Weight_"], axis=0))[::-1]
             else:
