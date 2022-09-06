@@ -135,7 +135,7 @@ class CoupledTensor():
 
 
     def fit(self, tol=1e-7, maxiter=500, progress=True, verbose=False):
-        """ Perform CP-like coupled tensor factorization """
+        """ Perform CP-like coupled tensor factorization through ALS """
         old_R2X = -np.inf
         tq = tqdm(range(maxiter), disable=(not progress))
 
@@ -169,6 +169,7 @@ class CoupledTensor():
         self.normalize_factors("max")
 
     def normalize_factors(self, method="max"):
+        """ Normalize factor matrix, either by L0 or L2 norm, and shift weights to the weight matrix """
         current_R2X = self.R2X()
         # Normalize factors
         for mmode in self.modes:
@@ -228,7 +229,8 @@ class CoupledTensor():
         axes = [plt.subplot(gs[rr]) for rr in range(ddims)]
         comp_labels = factors[0].keys()
         if dvar is not None:
-            f.suptitle(f"{dvar} Decomposition (R2X = {self.R2X(dvar):.2f})")
+            ws = self.x["_Weight_"].loc[dvar][comp_order] if sort_comps else self.x["_Weight_"].loc[dvar]
+            f.suptitle(f"{dvar} Decomposition (R2X = {self.R2X(dvar):.2f})\nWeights={ws}")
 
         for rr in range(ddims):
             sns.heatmap(factors[rr], cmap="PiYG", center=0, xticklabels=comp_labels, yticklabels=factors[rr].index,
