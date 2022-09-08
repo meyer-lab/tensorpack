@@ -7,13 +7,14 @@ import pandas as pd
 import xarray as xr
 from ..coupled import CoupledTensor
 
-def genSample():
+def genSample(missing=True):
     dasset = np.random.rand(8, 7, 6, 5)
-    dasset[np.random.rand(*dasset.shape) < 0.1] = np.nan
     dliab = np.random.rand(8, 7, 5)
-    dliab[np.random.rand(*dliab.shape) < 0.1] = np.nan
     dequity = np.random.rand(8, 4)
-    dequity[np.random.rand(*dequity.shape) < 0.1] = np.nan
+    if missing:
+        dasset[np.random.rand(*dasset.shape) < 0.1] = np.nan
+        dliab[np.random.rand(*dliab.shape) < 0.1] = np.nan
+        dequity[np.random.rand(*dequity.shape) < 0.1] = np.nan
 
     return xr.Dataset(
         data_vars=dict(
