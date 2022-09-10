@@ -1,11 +1,13 @@
 import xarray as xr
 import numpy as np
 import tensorly as tl
+import time
 from tensorly.cp_tensor import CPTensor
-from numpy.linalg import lstsq, norm
+from numpy.linalg import norm
 from tqdm import tqdm
 from .SVD_impute import IterativeSVD
-from .cmtf import censored_lstsq
+from .linalg import mlstsq, calcR2X_TnB
+from sklearn.decomposition import NMF
 
 
 def xr_unfold(data: xr.Dataset, mode: str):
@@ -17,23 +19,18 @@ def xr_unfold(data: xr.Dataset, mode: str):
     return np.concatenate(arrs, axis=1)
 
 
-def calcR2X_TnB(tIn, tRecon):
-    """ Calculate the top and bottom part of R2X formula separately, ignore NaN """
-    tMask = np.isfinite(tIn)
-    tIn = np.nan_to_num(tIn)
-    vTop = norm(tRecon * tMask - tIn) ** 2.0
-    vBottom = norm(tIn) ** 2.0
-    return vTop, vBottom
+
 
 
 class CoupledTensor():
-    def __init__(self, data: xr.Dataset, rank):
+    def __init__(self, data: xr.Dataset, rank, nonneg=False):
         dd = data.to_dict()
 
         self.data = data
         self.rank = rank
         self.dvars = list(self.data.data_vars)
         self.modes = list(self.data.dims)
+        self.nonneg = nonneg
 
         ncoords = {}
         ndata = {}
@@ -57,11 +54,20 @@ class CoupledTensor():
 
     def initialize(self, method="svd", verbose=False):
         """ Initialize each mode factor matrix """
+        self.x["_Weight_"][:] = np.ones_like(self.x["_Weight_"])
+        for mmode in self.modes:    # wipe off old values
+            self.x["_" + mmode][:] = np.zeros_like(self.x["_" + mmode])
+
         if method == "ones":
             for mmode in self.modes:
                 self.x["_"+mmode][:] = np.ones_like(self.x["_"+mmode])
+        if method == "rand":
+            for mmode in self.modes:
+                self.x["_"+mmode][:] = np.random.rand(*self.x["_"+mmode].shape)
+        if method == "randn":
+            for mmode in self.modes:
+                self.x["_"+mmode][:] = np.random.randn(*self.x["_"+mmode].shape)
         if method == "svd":
-            import time
             for mmode in self.modes:
                 start_time = time.time()
                 unfold = self.unfold[mmode].copy()
@@ -73,8 +79,17 @@ class CoupledTensor():
                 self.x["_"+mmode][:, :ncol] = np.linalg.svd(unfold)[0][:,:ncol]
                 if verbose:
                     print(f"{mmode} SVD initialization: done in {time.time() - start_time}")
-        self.x["_Weight_"][:] = np.ones_like(self.x["_Weight_"])
+        if method == "nmf":
+            for mmode in self.modes:
+                A = np.nan_to_num(self.unfold[mmode].copy(), copy=False, nan=0.0)
+                assert np.all(A >= 0.0)
+                ncol = min(self.rank, len(self.x[mmode]))
+                nmf = NMF(ncol, tol=0.0001, max_iter=1000)
+                self.x["_" + mmode][:, :ncol] = nmf.fit_transform(A)[:, :ncol]
 
+        # integrity check
+        for mmode in self.modes:
+            assert np.sum(np.isnan(self.x["_" + mmode])) <= 0, f"{mmode} init {method} factor contains missings"
 
     def to_CPTensor(self, dvar: str, component=None):
         """ Return a CPTensor object that is the factorized version of dvar """
@@ -131,7 +146,9 @@ class CoupledTensor():
         for dvar in self.mode_to_dvar[mode]:
             recon = tl.tenalg.khatri_rao([self.x["_"+mmode].to_numpy() for mmode in self.dims[dvar] if mmode != mode])
             arrs.append(recon * self.x["_Weight_"].loc[dvar].to_numpy())    # put weights back to kr
-        return np.concatenate(arrs, axis=0)
+        concat = np.concatenate(arrs, axis=0)
+        assert np.sum(np.isnan(concat)) <= 0, f"{concat}\n^{mode} Khatri-Rao factor contains missings"
+        return concat
 
 
     def fit(self, tol=1e-7, maxiter=500, progress=True, verbose=False):
@@ -141,18 +158,13 @@ class CoupledTensor():
 
         # missing value handling
         uniqueInfo = {}
-        containMissing = {}
         for mmode in self.modes:
-            containMissing[mmode] = np.sum(~np.isfinite(self.unfold[mmode])) > 0
             uniqueInfo[mmode] = np.unique(np.isfinite(self.unfold[mmode].T), axis=1, return_inverse=True)
 
         for i in tq:
             # Solve on each mode
             for mmode in self.modes:
-                if containMissing[mmode]:
-                    sol = censored_lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode])
-                else:
-                    sol = lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, rcond=None)[0].T
+                sol = mlstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode], nonneg=self.nonneg).T
                 norm_vec = norm(sol, axis=0)
                 for dvar in self.mode_to_dvar[mmode]:
                     self.x["_Weight_"].loc[dvar] *= norm_vec
@@ -233,8 +245,10 @@ class CoupledTensor():
             f.suptitle(f"{dvar} Decomposition (R2X = {self.R2X(dvar):.2f})\nWeights={ws}")
 
         for rr in range(ddims):
-            sns.heatmap(factors[rr], cmap="PiYG", center=0, xticklabels=comp_labels, yticklabels=factors[rr].index,
-                        cbar=True, vmin=-1.0, vmax=1.0, ax=axes[rr])
+            vvmin = 0.0 if self.nonneg else -1.0
+            vcmap = "Greens" if self.nonneg else "PiYG"
+            sns.heatmap(factors[rr], cmap=vcmap, center=0, xticklabels=comp_labels, yticklabels=factors[rr].index,
+                        cbar=True, vmin=vvmin, vmax=1.0, ax=axes[rr])
             axes[rr].set_xlabel("Components")
             axes[rr].set_ylabel(None)
             axes[rr].set_title(modes[rr])
