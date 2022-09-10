@@ -19,9 +19,6 @@ def xr_unfold(data: xr.Dataset, mode: str):
     return np.concatenate(arrs, axis=1)
 
 
-
-
-
 class CoupledTensor():
     def __init__(self, data: xr.Dataset, rank, nonneg=False):
         dd = data.to_dict()
@@ -54,8 +51,9 @@ class CoupledTensor():
 
     def initialize(self, method="svd", verbose=False):
         """ Initialize each mode factor matrix """
+        # wipe off old values
         self.x["_Weight_"][:] = np.ones_like(self.x["_Weight_"])
-        for mmode in self.modes:    # wipe off old values
+        for mmode in self.modes:
             self.x["_" + mmode][:] = np.zeros_like(self.x["_" + mmode])
 
         if method == "ones":
@@ -103,7 +101,8 @@ class CoupledTensor():
                             [self.x["_"+mmode].to_numpy() for mmode in self.dims[dvar]]))
 
     def R2X(self, dvar=None, component=None):
-        """ Calculate the R2X of dvar decomposition. If dvar not provide, calculate the overall R2X"""
+        """ Calculate the R2X of dvar decomposition.
+        If dvar not provide, calculate the overall R2X"""
         if dvar is None:    # find overall R2X
             vTop, vBottom = 0.0, 0.0
             for dvar in self.dvars:
@@ -115,6 +114,24 @@ class CoupledTensor():
         assert dvar in self.dvars
         vTop, vBottom = calcR2X_TnB(self.data[dvar].to_numpy(), self.to_CPTensor(dvar, component=component).to_tensor())
         return 1.0 - vTop / vBottom
+
+    def MSE(self, dvar=None, component=None):
+        """ Calculate the mean square error (MSE) of dvar decomposition.
+        If dvar not provide, calculate the overall R2X
+        """
+        dvars = self.dvars.copy()
+        if dvar is not None:
+            dvars = [dvar]
+        origs, recons = [], []
+        for ddvar in dvars:
+            origs.append(self.data[ddvar].to_numpy().flatten())
+            recons.append(self.to_CPTensor(ddvar, component=component).to_tensor().flatten())
+        origs, recons = np.concatenate(origs), np.concatenate(recons)
+        not_miss = np.isfinite(origs)
+        origs, recons = origs[not_miss], recons[not_miss]
+
+        # TODO: double check this formula
+        return np.sum((origs - recons)**2) / np.sum((origs)**2)
 
     def reconstruct(self, dvar=None):
         """ Put decomposed factors back into an xr.DataArray (when specify dvar name) or and xr.Dataset """
@@ -164,12 +181,8 @@ class CoupledTensor():
         for i in tq:
             # Solve on each mode
             for mmode in self.modes:
-                sol = mlstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode], nonneg=self.nonneg).T
-                norm_vec = norm(sol, axis=0)
-                for dvar in self.mode_to_dvar[mmode]:
-                    self.x["_Weight_"].loc[dvar] *= norm_vec
-                self.x["_"+mmode][:] = sol / norm_vec
-
+                self.x["_"+mmode][:] = mlstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode], nonneg=self.nonneg).T
+                self.normalize_factors("norm")
             current_R2X = self.R2X()
             if verbose:
                 print(f"R2Xs at {i}: {[self.R2X(dvar) for dvar in self.dvars]}")
@@ -186,14 +199,18 @@ class CoupledTensor():
         # Normalize factors
         for mmode in self.modes:
             sol = self.x["_" + mmode]
-            norm_vec = np.ones((sol.shape[1]))
-            if method == "max":
+            if method == "max":     # the one with maximum absolute value
                 norm_vec = np.array([max(sol[:, ii].min(), sol[:, ii].max(), key=abs) for ii in range(sol.shape[1])])
             elif method == "norm":
                 norm_vec = norm(sol, axis=0)
+            else:
+                norm_vec = np.ones((sol.shape[1]))
             for dvar in self.mode_to_dvar[mmode]:
                 self.x["_Weight_"].loc[dvar] *= norm_vec
-            self.x["_" + mmode][:] /= norm_vec
+
+            # if norm is 0, leave as it is to avoid divide by 0 (the factors are all 0 anyway)
+            nonzero_terms = norm_vec != 0
+            self.x["_" + mmode][:, nonzero_terms] = sol[:, nonzero_terms] / norm_vec[nonzero_terms]
         assert abs(current_R2X - self.R2X()) / current_R2X < 1e-6, \
             f"normalize_factors() causes R2X change: {current_R2X} to {self.R2X()}"
 
@@ -208,6 +225,7 @@ class CoupledTensor():
         ddims = len(modes)
         factors = [self.x["_"+mode].to_pandas() for mode in modes]
 
+        # when plot only one array, add parenthesis on entries not existing and exist only by sharing
         if dvar is not None:
             dat = self.data[dvar]
             ttdim = dat.ndim
