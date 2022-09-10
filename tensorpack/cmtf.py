@@ -10,7 +10,7 @@ from copy import deepcopy
 from tensorly.decomposition._cp import initialize_cp
 from tqdm import tqdm
 from .SVD_impute import IterativeSVD
-from .linalg import mlstsq
+from .linalg import mlstsq, calcR2X_TnB
 
 
 tl.set_backend('numpy')
@@ -26,21 +26,17 @@ def buildMat(tFac):
 def calcR2X(tFac, tIn=None, mIn=None):
     """ Calculate R2X. Optionally it can be calculated for only the tensor or matrix. """
     assert (tIn is not None) or (mIn is not None)
-
     vTop, vBottom = 0.0, 0.0
 
     if tIn is not None:
-        tMask = np.isfinite(tIn)
-        tIn = np.nan_to_num(tIn)
-        vTop += np.linalg.norm(tl.cp_to_tensor(tFac) * tMask - tIn)**2.0
-        vBottom += np.linalg.norm(tIn)**2.0
+        vs = calcR2X_TnB(tIn, tl.cp_to_tensor(tFac))
+        vTop += vs[0]
+        vBottom += vs[1]
     if mIn is not None:
-        mMask = np.isfinite(mIn)
         recon = tFac if isinstance(tFac, np.ndarray) else buildMat(tFac)
-        mIn = np.nan_to_num(mIn)
-        vTop += np.linalg.norm(recon * mMask - mIn)**2.0
-        vBottom += np.linalg.norm(mIn)**2.0
-
+        vs = calcR2X_TnB(mIn, recon)
+        vTop += vs[0]
+        vBottom += vs[1]
     return 1.0 - vTop / vBottom
 
 

@@ -6,7 +6,7 @@ from tensorly.cp_tensor import CPTensor
 from numpy.linalg import norm
 from tqdm import tqdm
 from .SVD_impute import IterativeSVD
-from .linalg import mlstsq
+from .linalg import mlstsq, calcR2X_TnB
 from sklearn.decomposition import NMF
 
 
@@ -19,13 +19,7 @@ def xr_unfold(data: xr.Dataset, mode: str):
     return np.concatenate(arrs, axis=1)
 
 
-def calcR2X_TnB(tIn, tRecon):
-    """ Calculate the top and bottom part of R2X formula separately """
-    tMask = np.isfinite(tIn)
-    tIn = np.nan_to_num(tIn)
-    vTop = norm(tRecon * tMask - tIn) ** 2.0
-    vBottom = norm(tIn) ** 2.0
-    return vTop, vBottom
+
 
 
 class CoupledTensor():

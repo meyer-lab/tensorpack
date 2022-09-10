@@ -1,5 +1,14 @@
 import numpy as np
+from numpy.linalg import norm
 from scipy.optimize import nnls
+
+def calcR2X_TnB(tIn, tRecon):
+    """ Calculate the top and bottom part of R2X formula separately """
+    tMask = np.isfinite(tIn)
+    tIn = np.nan_to_num(tIn)
+    vTop = norm(tRecon * tMask - tIn) ** 2.0
+    vBottom = norm(tIn) ** 2.0
+    return vTop, vBottom
 
 def lstsq_(A: np.ndarray, B: np.ndarray, nonneg=False) -> np.ndarray:
     """ Solve min[Ax - b]_2 with least square, either non-negative or regular
@@ -44,9 +53,7 @@ def mlstsq(A: np.ndarray, B: np.ndarray, uniqueInfo=None, nonneg=False) -> np.nd
         for i in range(unique.shape[1]):
             uI = uIDX == i
             uu = np.squeeze(unique[:, i])
-
-            Bx = B[uu, :]
-            X[:, uI] = lstsq_(A[uu, :], Bx[:, uI], nonneg=nonneg)
+            X[:, uI] = lstsq_(A[uu, :], B[uu, uI], nonneg=nonneg)
         return X
     # does not contain missing values
     else:
