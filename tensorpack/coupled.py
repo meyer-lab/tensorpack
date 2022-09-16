@@ -20,14 +20,13 @@ def xr_unfold(data: xr.Dataset, mode: str):
 
 
 class CoupledTensor():
-    def __init__(self, data: xr.Dataset, rank, nonneg=False):
+    def __init__(self, data: xr.Dataset, rank):
         dd = data.to_dict()
 
         self.data = data
         self.rank = rank
         self.dvars = list(self.data.data_vars)
         self.modes = list(self.data.dims)
-        self.nonneg = nonneg
 
         ncoords = {}
         ndata = {}
@@ -168,7 +167,7 @@ class CoupledTensor():
         return concat
 
 
-    def fit(self, tol=1e-7, maxiter=500, progress=True, verbose=False):
+    def fit(self, tol=1e-7, maxiter=500, nonneg=False, progress=True, verbose=False):
         """ Perform CP-like coupled tensor factorization through ALS """
         old_R2X = -np.inf
         tq = tqdm(range(maxiter), disable=(not progress))
@@ -181,7 +180,7 @@ class CoupledTensor():
         for i in tq:
             # Solve on each mode
             for mmode in self.modes:
-                self.x["_"+mmode][:] = mlstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode], nonneg=self.nonneg).T
+                self.x["_"+mmode][:] = mlstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode], nonneg=nonneg).T
                 self.normalize_factors("norm")
             current_R2X = self.R2X()
             if verbose:
@@ -263,10 +262,8 @@ class CoupledTensor():
             f.suptitle(f"{dvar} Decomposition (R2X = {self.R2X(dvar):.2f})\nWeights={ws}")
 
         for rr in range(ddims):
-            vvmin = 0.0 if self.nonneg else -1.0
-            vcmap = "Greens" if self.nonneg else "PiYG"
-            sns.heatmap(factors[rr], cmap=vcmap, center=0, xticklabels=comp_labels, yticklabels=factors[rr].index,
-                        cbar=True, vmin=vvmin, vmax=1.0, ax=axes[rr])
+            sns.heatmap(factors[rr], cmap="PiYG", center=0, xticklabels=comp_labels, yticklabels=factors[rr].index,
+                        cbar=True, vmin=-1.0, vmax=1.0, ax=axes[rr])
             axes[rr].set_xlabel("Components")
             axes[rr].set_ylabel(None)
             axes[rr].set_title(modes[rr])

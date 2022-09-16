@@ -36,10 +36,21 @@ def test_generated_coupling():
     oldR2X = -np.inf
     for r in np.arange(3,9,2):
         cpd = CoupledTensor(data, r)
-        cpd.initialize()
+        cpd.initialize("svd")
         cpd.fit()
         R2X = cpd.R2X()
         assert oldR2X < R2X
         oldR2X = R2X
         assert np.all(np.array([cpd.R2X(dvar) for dvar in cpd.dvars]) > 0.7)
 
+def test_generated_coupling():
+    data = genSample()
+    oldR2X = -np.inf
+    for r in np.arange(3,9,2):
+        cpd = CoupledTensor(data, r)
+        cpd.initialize("nmf")
+        cpd.fit(nonneg=True)
+        R2X = cpd.R2X()
+        assert oldR2X < R2X
+        oldR2X = R2X
+        assert np.all(np.array([cpd.R2X(dvar) for dvar in cpd.dvars]) > 0.7)
