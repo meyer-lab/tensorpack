@@ -38,7 +38,7 @@ def mlstsq(A: np.ndarray, B: np.ndarray, uniqueInfo=None, nonneg=False) -> np.nd
         -------
         X (ndarray) : r x n matrix that minimizes norm(M*(AX - B))
     """
-    # contain missing values
+    # contain missing values, equivalent to old censored_lstsq()
     if np.any(np.isnan(B)):
         """ Solves least squares problem subject to missing data.
             Note: uses a for loop over the missing patterns of B, leading to a
@@ -53,7 +53,8 @@ def mlstsq(A: np.ndarray, B: np.ndarray, uniqueInfo=None, nonneg=False) -> np.nd
         for i in range(unique.shape[1]):
             uI = uIDX == i
             uu = np.squeeze(unique[:, i])
-            X[:, uI] = lstsq_(A[uu, :], B[uu, uI], nonneg=nonneg)
+            Bx = B[uu, :]
+            X[:, uI] = lstsq_(A[uu, :], Bx[:, uI], nonneg=nonneg)
         return X
     # does not contain missing values
     else:

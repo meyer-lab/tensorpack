@@ -39,11 +39,11 @@ def test_generated_coupling():
         cpd.initialize("svd")
         cpd.fit()
         R2X = cpd.R2X()
-        assert oldR2X < R2X
+        assert oldR2X <= R2X, f"r = {r}: oldR2X = {oldR2X}, but newR2X = {R2X}"
         oldR2X = R2X
         assert np.all(np.array([cpd.R2X(dvar) for dvar in cpd.dvars]) > 0.7)
 
-def test_generated_coupling():
+def test_coupled_nonneg():
     data = genSample()
     oldR2X = -np.inf
     for r in np.arange(3,9,2):
@@ -51,6 +51,6 @@ def test_generated_coupling():
         cpd.initialize("nmf")
         cpd.fit(nonneg=True)
         R2X = cpd.R2X()
-        assert oldR2X < R2X
+        assert oldR2X <= R2X, f"r = {r}: oldR2X = {oldR2X}, but newR2X = {R2X}"
         oldR2X = R2X
         assert np.all(np.array([cpd.R2X(dvar) for dvar in cpd.dvars]) > 0.7)

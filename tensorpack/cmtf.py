@@ -249,7 +249,7 @@ def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, progress=True):
             tFac.factors[m] = mlstsq(kr, tl.unfold(tOrig, m).T).T
 
         # Solve for the glycan matrix fit
-        tFac.mFactor = np.linalg.lstsq(tFac.factors[0][missingM, :], mOrig[missingM, :], rcond=-1)[0].T
+        tFac.mFactor = mlstsq(tFac.factors[0][missingM, :], mOrig[missingM, :]).T
 
         # Solve for subjects factors
         kr = khatri_rao(tFac.factors, skip_matrix=0)
