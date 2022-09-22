@@ -1,11 +1,13 @@
 import xarray as xr
 import numpy as np
 import tensorly as tl
+import time
 from tensorly.cp_tensor import CPTensor
-from numpy.linalg import lstsq, norm
+from numpy.linalg import norm
 from tqdm import tqdm
 from .SVD_impute import IterativeSVD
-from .cmtf import censored_lstsq
+from .linalg import mlstsq, calcR2X_TnB
+from sklearn.decomposition import NMF
 
 
 def xr_unfold(data: xr.Dataset, mode: str):
@@ -15,15 +17,6 @@ def xr_unfold(data: xr.Dataset, mode: str):
         if mode in da.dims:
             arrs.append(tl.unfold(da.to_numpy(), list(da.dims).index(mode)))  # unfold
     return np.concatenate(arrs, axis=1)
-
-
-def calcR2X_TnB(tIn, tRecon):
-    """ Calculate the top and bottom part of R2X formula separately """
-    tMask = np.isfinite(tIn)
-    tIn = np.nan_to_num(tIn)
-    vTop = norm(tRecon * tMask - tIn) ** 2.0
-    vBottom = norm(tIn) ** 2.0
-    return vTop, vBottom
 
 
 class CoupledTensor():
@@ -57,11 +50,21 @@ class CoupledTensor():
 
     def initialize(self, method="svd", verbose=False):
         """ Initialize each mode factor matrix """
+        # wipe off old values
+        self.x["_Weight_"][:] = np.ones_like(self.x["_Weight_"])
+        for mmode in self.modes:
+            self.x["_" + mmode][:] = np.zeros_like(self.x["_" + mmode])
+
         if method == "ones":
             for mmode in self.modes:
                 self.x["_"+mmode][:] = np.ones_like(self.x["_"+mmode])
+        if method == "rand":
+            for mmode in self.modes:
+                self.x["_"+mmode][:] = np.random.rand(*self.x["_"+mmode].shape)
+        if method == "randn":
+            for mmode in self.modes:
+                self.x["_"+mmode][:] = np.random.randn(*self.x["_"+mmode].shape)
         if method == "svd":
-            import time
             for mmode in self.modes:
                 start_time = time.time()
                 unfold = self.unfold[mmode].copy()
@@ -73,17 +76,32 @@ class CoupledTensor():
                 self.x["_"+mmode][:, :ncol] = np.linalg.svd(unfold)[0][:,:ncol]
                 if verbose:
                     print(f"{mmode} SVD initialization: done in {time.time() - start_time}")
-        self.x["_Weight_"][:] = np.ones_like(self.x["_Weight_"])
+        if method == "nmf":
+            for mmode in self.modes:
+                A = np.nan_to_num(self.unfold[mmode].copy(), copy=False, nan=0.0)
+                assert np.all(A >= 0.0)
+                ncol = min(self.rank, len(self.x[mmode]))
+                nmf = NMF(ncol, tol=0.0001, max_iter=1000)
+                self.x["_" + mmode][:, :ncol] = nmf.fit_transform(A)[:, :ncol]
 
+        # integrity check
+        for mmode in self.modes:
+            assert np.sum(np.isnan(self.x["_" + mmode])) <= 0, f"{mmode} init {method} factor contains missings"
 
-    def to_CPTensor(self, dvar: str):
+    def to_CPTensor(self, dvar: str, component=None):
         """ Return a CPTensor object that is the factorized version of dvar """
         assert dvar in self.dvars
+        if component is not None:
+            if isinstance(component, int):
+                component = [component]
+            return CPTensor((self.x["_Weight_"].loc[dvar, component].to_numpy(),
+                            [self.x["_"+mmode].loc[:, component].to_numpy() for mmode in self.dims[dvar]]))
         return CPTensor((self.x["_Weight_"].loc[dvar, :].to_numpy(),
                             [self.x["_"+mmode].to_numpy() for mmode in self.dims[dvar]]))
 
-    def calcR2X(self, dvar=None):
-        """ Calculate the R2X of dvar decomposition. If dvar not provide, calculate the overall R2X"""
+    def R2X(self, dvar=None, component=None):
+        """ Calculate the R2X of dvar decomposition.
+        If dvar not provide, calculate the overall R2X"""
         if dvar is None:    # find overall R2X
             vTop, vBottom = 0.0, 0.0
             for dvar in self.dvars:
@@ -93,8 +111,26 @@ class CoupledTensor():
             return 1.0 - vTop / vBottom
 
         assert dvar in self.dvars
-        vTop, vBottom = calcR2X_TnB(self.data[dvar].to_numpy(), self.to_CPTensor(dvar).to_tensor())
+        vTop, vBottom = calcR2X_TnB(self.data[dvar].to_numpy(), self.to_CPTensor(dvar, component=component).to_tensor())
         return 1.0 - vTop / vBottom
+
+    def MSE(self, dvar=None, component=None):
+        """ Calculate the mean square error (MSE) of dvar decomposition.
+        If dvar not provide, calculate the overall R2X
+        """
+        dvars = self.dvars.copy()
+        if dvar is not None:
+            dvars = [dvar]
+        origs, recons = [], []
+        for ddvar in dvars:
+            origs.append(self.data[ddvar].to_numpy().flatten())
+            recons.append(self.to_CPTensor(ddvar, component=component).to_tensor().flatten())
+        origs, recons = np.concatenate(origs), np.concatenate(recons)
+        not_miss = np.isfinite(origs)
+        origs, recons = origs[not_miss], recons[not_miss]
+
+        # TODO: double check this formula
+        return np.sum((origs - recons)**2) / np.sum((origs)**2)
 
     def reconstruct(self, dvar=None):
         """ Put decomposed factors back into an xr.DataArray (when specify dvar name) or and xr.Dataset """
@@ -103,7 +139,7 @@ class CoupledTensor():
             R2Xs = {}
             for dvar in self.dvars:
                 ndata[dvar] = (self.dims[dvar], self.to_CPTensor(dvar).to_tensor())
-                R2Xs[dvar] = self.calcR2X(dvar)     # a bit redundant, but more beautiful
+                R2Xs[dvar] = self.R2X(dvar)     # a bit redundant, but more beautiful
             return xr.Dataset(
                 data_vars=ndata,
                 coords=self.data.coords,
@@ -116,7 +152,7 @@ class CoupledTensor():
             data=self.to_CPTensor(dvar).to_tensor(),
             coords={mmode: self.data[mmode].to_numpy() for mmode in self.dims[dvar]},
             name=dvar,
-            attrs=dict(R2X = self.calcR2X(dvar)),
+            attrs=dict(R2X = self.R2X(dvar)),
         )
 
     def khatri_rao(self, mode: str):
@@ -126,36 +162,29 @@ class CoupledTensor():
         for dvar in self.mode_to_dvar[mode]:
             recon = tl.tenalg.khatri_rao([self.x["_"+mmode].to_numpy() for mmode in self.dims[dvar] if mmode != mode])
             arrs.append(recon * self.x["_Weight_"].loc[dvar].to_numpy())    # put weights back to kr
-        return np.concatenate(arrs, axis=0)
+        concat = np.concatenate(arrs, axis=0)
+        assert np.sum(np.isnan(concat)) <= 0, f"{concat}\n^{mode} Khatri-Rao factor contains missings"
+        return concat
 
 
-    def perform_CP(self, tol=1e-7, maxiter=500, progress=True, verbose=False):
-        """ Perform CP-like coupled tensor factorization """
+    def fit(self, tol=1e-7, maxiter=500, nonneg=False, progress=True, verbose=False):
+        """ Perform CP-like coupled tensor factorization through ALS """
         old_R2X = -np.inf
         tq = tqdm(range(maxiter), disable=(not progress))
 
         # missing value handling
         uniqueInfo = {}
-        containMissing = {}
         for mmode in self.modes:
-            containMissing[mmode] = np.sum(~np.isfinite(self.unfold[mmode])) > 0
             uniqueInfo[mmode] = np.unique(np.isfinite(self.unfold[mmode].T), axis=1, return_inverse=True)
 
         for i in tq:
             # Solve on each mode
             for mmode in self.modes:
-                if containMissing[mmode]:
-                    sol = censored_lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode])
-                else:
-                    sol = lstsq(self.khatri_rao(mmode), self.unfold[mmode].T, rcond=None)[0].T
-                norm_vec = norm(sol, axis=0)
-                for dvar in self.mode_to_dvar[mmode]:
-                    self.x["_Weight_"].loc[dvar] *= norm_vec
-                self.x["_"+mmode][:] = sol / norm_vec
-
-            current_R2X = self.calcR2X()
+                self.x["_"+mmode][:] = mlstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode], nonneg=nonneg).T
+                self.normalize_factors("norm")
+            current_R2X = self.R2X()
             if verbose:
-                print(f"R2Xs at {i}: {[self.calcR2X(dvar) for dvar in self.dvars]}")
+                print(f"R2Xs at {i}: {[self.R2X(dvar) for dvar in self.dvars]}")
             tq.set_postfix(refresh=False, R2X=current_R2X, delta=current_R2X-old_R2X)
             if np.abs(current_R2X-old_R2X) < tol:
                 break
@@ -164,20 +193,25 @@ class CoupledTensor():
         self.normalize_factors("max")
 
     def normalize_factors(self, method="max"):
-        current_R2X = self.calcR2X()
+        """ Normalize factor matrix, either by L0 or L2 norm, and shift weights to the weight matrix """
+        current_R2X = self.R2X()
         # Normalize factors
         for mmode in self.modes:
             sol = self.x["_" + mmode]
-            norm_vec = np.ones((sol.shape[1]))
-            if method == "max":
+            if method == "max":     # the one with maximum absolute value
                 norm_vec = np.array([max(sol[:, ii].min(), sol[:, ii].max(), key=abs) for ii in range(sol.shape[1])])
             elif method == "norm":
                 norm_vec = norm(sol, axis=0)
+            else:
+                norm_vec = np.ones((sol.shape[1]))
             for dvar in self.mode_to_dvar[mmode]:
                 self.x["_Weight_"].loc[dvar] *= norm_vec
-            self.x["_" + mmode][:] /= norm_vec
-        assert abs(current_R2X - self.calcR2X()) / current_R2X < 1e-6, \
-            f"normalize_factors() causes R2X change: {current_R2X} to {self.calcR2X()}"
+
+            # if norm is 0, leave as it is to avoid divide by 0 (the factors are all 0 anyway)
+            nonzero_terms = norm_vec != 0
+            self.x["_" + mmode][:, nonzero_terms] = sol[:, nonzero_terms] / norm_vec[nonzero_terms]
+        assert abs(current_R2X - self.R2X()) / current_R2X < 1e-6, \
+            f"normalize_factors() causes R2X change: {current_R2X} to {self.R2X()}"
 
 
     def plot_factors(self, dvar=None, reorder=[], sort_comps=True):
@@ -189,6 +223,17 @@ class CoupledTensor():
         modes = self.modes if dvar is None else self.dims[dvar]
         ddims = len(modes)
         factors = [self.x["_"+mode].to_pandas() for mode in modes]
+
+        # when plot only one array, add parenthesis on entries not existing and exist only by sharing
+        if dvar is not None:
+            dat = self.data[dvar]
+            ttdim = dat.ndim
+            assert len(factors) == ttdim
+            for m in range(ttdim):
+                no_include = np.all(np.isnan(dat), axis=tuple(np.delete(np.arange(ttdim), m)))
+                for (ii, val) in enumerate(no_include):
+                    if val:
+                        factors[m].index.values[ii] = f"({factors[m].index.values[ii]})*"
 
         if sort_comps:   # sort components based on weights
             if dvar is None:
@@ -213,8 +258,8 @@ class CoupledTensor():
         axes = [plt.subplot(gs[rr]) for rr in range(ddims)]
         comp_labels = factors[0].keys()
         if dvar is not None:
-            #ws = self.x["_Weight_"].loc[dvar][comp_order] if sort_comps else self.x["_Weight_"].loc[dvar]
-            f.suptitle(f"{dvar} Decomposition (R2X = {self.calcR2X(dvar):.4f})")
+            ws = self.x["_Weight_"].loc[dvar][comp_order] if sort_comps else self.x["_Weight_"].loc[dvar]
+            f.suptitle(f"{dvar} Decomposition (R2X = {self.R2X(dvar):.2f})\nWeights={ws}")
 
         for rr in range(ddims):
             sns.heatmap(factors[rr], cmap="PiYG", center=0, xticklabels=comp_labels, yticklabels=factors[rr].index,
