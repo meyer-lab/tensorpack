@@ -258,10 +258,12 @@ class CoupledTensor():
 
         for r_ax in reorder:
             if isinstance(r_ax, int):
-                assert r_ax < ddims
+                if r_ax >= ddims:
+                    raise ValueError(f"plot_factors(): number in reorder, {r_ax}, exceeds the number of modes, {ddims}.")
                 factors[r_ax] = reorder_table(factors[r_ax])
             elif isinstance(r_ax, str):
-                assert r_ax in modes
+                if r_ax not in modes:
+                    raise ValueError(f"plot_factors(): name in reorder, {r_ax}, is not in the modes of the dataset.")
                 rr = modes.index(r_ax)
                 factors[rr] = reorder_table(factors[rr])
             else:
