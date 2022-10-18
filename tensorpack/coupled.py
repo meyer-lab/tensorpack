@@ -141,7 +141,7 @@ class CoupledTensor():
         origs, recons = origs[not_miss], recons[not_miss]
 
         # TODO: double check this formula
-        return np.sum((origs - recons)**2) / np.sum((origs)**2)
+        return np.sum(((origs - recons) / origs)**2) / np.prod(origs.shape)
 
     def reconstruct(self, dvar=None):
         """ Put decomposed factors back into an xr.DataArray (when specify dvar name) or and xr.Dataset """
