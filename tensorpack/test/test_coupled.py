@@ -34,7 +34,7 @@ def genSample(missing=0.0):
 def test_coupled_svd():
     data = genSample()
     oldR2X = -np.inf
-    for r in np.arange(3,9,2):
+    for r in [3,5,7,9]:
         cpd = CoupledTensor(data, r)
         cpd.initialize("svd")
         cpd.fit()
@@ -46,7 +46,7 @@ def test_coupled_svd():
 def test_coupled_nonneg():
     data = genSample()
     oldR2X = -np.inf
-    for r in np.arange(3,9,2):
+    for r in [3,5,7,9]:
         cpd = CoupledTensor(data, r)
         cpd.initialize("nmf")
         cpd.fit(nonneg=True)
