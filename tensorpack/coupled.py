@@ -21,6 +21,11 @@ def xr_unfold(data: xr.Dataset, mode: str):
 
 class CoupledTensor():
     def __init__(self, data: xr.Dataset, rank):
+        if not isinstance(data, xr.Dataset):
+            raise TypeError("CoupledTensor(): data must be in xarray.Dataset format.")
+        if not (isinstance(rank, int) and rank >= 1):
+            raise ValueError("CoupledTensor(): rank must be a positive integer.")
+
         dd = data.to_dict()
 
         self.data = data
@@ -79,18 +84,21 @@ class CoupledTensor():
         if method == "nmf":
             for mmode in self.modes:
                 A = np.nan_to_num(self.unfold[mmode].copy(), copy=False, nan=0.0)
-                assert np.all(A >= 0.0)
+                if not np.all(A >= 0.0):
+                    raise ValueError("initialize(): when using nmf to initialize, all tensor value must be nonnegative.")
                 ncol = min(self.rank, len(self.x[mmode]))
                 nmf = NMF(ncol, tol=0.0001, max_iter=1000)
                 self.x["_" + mmode][:, :ncol] = nmf.fit_transform(A)[:, :ncol]
 
         # integrity check
         for mmode in self.modes:
-            assert np.sum(np.isnan(self.x["_" + mmode])) <= 0, f"{mmode} init {method} factor contains missings"
+            if np.sum(np.isnan(self.x["_" + mmode])) > 0:
+                raise RuntimeError(f"initialize(): {mmode} init {method} factor contains missings")
 
     def to_CPTensor(self, dvar: str, component=None):
         """ Return a CPTensor object that is the factorized version of dvar """
-        assert dvar in self.dvars
+        if dvar not in self.dvars:
+            raise ValueError(f"to_CPTensor: {dvar} is not a data variable in this dataset.")
         if component is not None:
             if isinstance(component, int):
                 component = [component]
@@ -110,7 +118,8 @@ class CoupledTensor():
                 vBottom += bot
             return 1.0 - vTop / vBottom
 
-        assert dvar in self.dvars
+        if dvar not in self.dvars:
+            raise ValueError(f"R2X(): {dvar} is not a data variable in this dataset.")
         vTop, vBottom = calcR2X_TnB(self.data[dvar].to_numpy(), self.to_CPTensor(dvar, component=component).to_tensor())
         return 1.0 - vTop / vBottom
 
@@ -120,6 +129,8 @@ class CoupledTensor():
         """
         dvars = self.dvars.copy()
         if dvar is not None:
+            if dvar not in self.dvars:
+                raise ValueError(f"MSE(): {dvar} is not a data variable in this dataset.")
             dvars = [dvar]
         origs, recons = [], []
         for ddvar in dvars:
@@ -147,7 +158,8 @@ class CoupledTensor():
             )
 
         # return just one xr.DataArray
-        assert dvar in self.dvars
+        if dvar not in self.dvars:
+            raise ValueError(f"reconstruct(): {dvar} is not a data variable in this dataset.")
         return xr.DataArray(
             data=self.to_CPTensor(dvar).to_tensor(),
             coords={mmode: self.data[mmode].to_numpy() for mmode in self.dims[dvar]},
@@ -157,13 +169,15 @@ class CoupledTensor():
 
     def khatri_rao(self, mode: str):
         """ Find the Khatri-Rao product on a certain mode after concatenation """
-        assert mode in self.modes
+        if mode not in self.modes:
+            raise ValueError(f"khatri_rao(): {mode} is not in a mode in this dataset.")
         arrs = []  # save kr-ed arrays
         for dvar in self.mode_to_dvar[mode]:
             recon = tl.tenalg.khatri_rao([self.x["_"+mmode].to_numpy() for mmode in self.dims[dvar] if mmode != mode])
             arrs.append(recon * self.x["_Weight_"].loc[dvar].to_numpy())    # put weights back to kr
         concat = np.concatenate(arrs, axis=0)
-        assert np.sum(np.isnan(concat)) <= 0, f"{concat}\n^{mode} Khatri-Rao factor contains missings"
+        if np.sum(np.isnan(concat)) > 0:
+            raise RuntimeError(f"{concat}\n^{mode} Khatri-Rao factor contains missings")
         return concat
 
 
@@ -210,8 +224,8 @@ class CoupledTensor():
             # if norm is 0, leave as it is to avoid divide by 0 (the factors are all 0 anyway)
             nonzero_terms = norm_vec != 0
             self.x["_" + mmode][:, nonzero_terms] = sol[:, nonzero_terms] / norm_vec[nonzero_terms]
-        assert abs(current_R2X - self.R2X()) / current_R2X < 1e-6, \
-            f"normalize_factors() causes R2X change: {current_R2X} to {self.R2X()}"
+        if abs(current_R2X - self.R2X()) / current_R2X > 1e-6:
+            raise RuntimeError(f"normalize_factors() causes R2X change: from {current_R2X} to {self.R2X()}")
 
 
     def plot_factors(self, dvar=None, reorder=[], sort_comps=True):
@@ -251,14 +265,14 @@ class CoupledTensor():
                 rr = modes.index(r_ax)
                 factors[rr] = reorder_table(factors[rr])
             else:
-                raise TypeError("reorder only takes a list of int's or str's.")
+                raise TypeError("plot_factors(): reorder only takes a list of int's or str's.")
 
         f = plt.figure(figsize=(5 * ddims, 6))
         gs = gridspec.GridSpec(1, ddims, wspace=0.5)
         axes = [plt.subplot(gs[rr]) for rr in range(ddims)]
         comp_labels = factors[0].keys()
         if dvar is not None:
-            ws = self.x["_Weight_"].loc[dvar][comp_order] if sort_comps else self.x["_Weight_"].loc[dvar]
+            ws = self.x["_Weight_"].loc[dvar][comp_order].values if sort_comps else self.x["_Weight_"].loc[dvar].values
             f.suptitle(f"{dvar} Decomposition (R2X = {self.R2X(dvar):.2f})\nWeights={ws}")
 
         for rr in range(ddims):
