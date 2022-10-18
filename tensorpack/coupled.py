@@ -18,6 +18,10 @@ def xr_unfold(data: xr.Dataset, mode: str):
             arrs.append(tl.unfold(da.to_numpy(), list(da.dims).index(mode)))  # unfold
     return np.concatenate(arrs, axis=1)
 
+# a function to round a number to certain significant figures
+round_to_n = lambda x, n: x if x == 0 else round(x, -int(np.floor(np.log10(abs(x)))) + (n - 1))
+vround2 = np.vectorize(lambda x: round_to_n(x, 2))
+
 
 class CoupledTensor():
     def __init__(self, data: xr.Dataset, rank):
@@ -275,6 +279,7 @@ class CoupledTensor():
         comp_labels = factors[0].keys()
         if dvar is not None:
             ws = self.x["_Weight_"].loc[dvar][comp_order].values if sort_comps else self.x["_Weight_"].loc[dvar].values
+            ws = vround2(ws)    # round weights to 2 sig figs
             f.suptitle(f"{dvar} Decomposition (R2X = {self.R2X(dvar):.2f})\nWeights={ws}")
 
         for rr in range(ddims):
