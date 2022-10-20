@@ -4,7 +4,7 @@ except ImportError:
     from distutils.core import setup, find_packages
 
 setup(name='tensorpack',
-      version='0.1.1',
+      version='0.1.2',
       description='A collection of tensor methods from the Meyer lab.',
       url='https://github.com/meyer-lab/tensorpack',
       license='MIT',
