@@ -26,8 +26,8 @@ def test_impute_missing_mat():
 
 
 def test_decomp_obj():
-    a = Decomposition(atyeo().tensor)
-    b = Decomposition(atyeo().tensor, method=tucker_decomp)
+    a = Decomposition(atyeo())
+    b = Decomposition(atyeo(), method=tucker_decomp)
     a.perform_tfac()
     a.perform_PCA()
     b.perform_tucker()
