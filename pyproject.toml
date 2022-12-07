@@ -11,7 +11,7 @@ numpy = "^1.21"
 tensorly = "^0.7"
 matplotlib = "^3.5.0"
 tqdm = "^4.62.3"
-seaborn = "^0.11.2"
+seaborn = ">=0.11.2"
 svgutils = "^0.3.4"
 xarray = "^2022.6.0"
 scikit-learn = "^1.1.2"
@@ -19,7 +19,7 @@ scikit-learn = "^1.1.2"
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
 pytest-cov = "^3.0.0"
-tensordata = {git = "https://github.com/meyer-lab/tensordata.git", branch = "main"}
+tensordata = { git = "https://github.com/meyer-lab/tensordata.git", branch = "main" }
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
