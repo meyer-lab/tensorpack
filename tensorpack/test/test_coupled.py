@@ -54,3 +54,18 @@ def test_coupled_nonneg():
         assert oldR2X <= R2X + 1e-2, f"r = {r}: oldR2X = {oldR2X}, but newR2X = {R2X}"
         oldR2X = R2X
         assert np.all(np.array([cpd.R2X(dvar) for dvar in cpd.dvars]) > 0.7)
+
+def test_randomized_svd():
+    data = xr.Dataset(
+        data_vars=dict(
+            Adam=(["Patient", "Box", "Gene", "Visit"], np.random.rand(148, 2, 7139, 6)),
+            Brendan=(["Patient", "Cytokine"], np.random.rand(148, 38)),
+        ))
+    cp = CoupledTensor(data, 2)
+    blank_R2X = cp.R2X()
+    cp.initialize("randomized_svd")
+    init_R2X = cp.R2X()
+    assert init_R2X > blank_R2X
+    cp.fit(maxiter=2, verbose=True)
+    fit_R2X = cp.R2X()
+    assert fit_R2X > init_R2X

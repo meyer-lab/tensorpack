@@ -8,6 +8,7 @@ from tqdm import tqdm
 from .SVD_impute import IterativeSVD
 from .linalg import mlstsq, calcR2X_TnB
 from sklearn.decomposition import NMF
+from sklearn.utils.extmath import randomized_svd
 
 
 def xr_unfold(data: xr.Dataset, mode: str):
@@ -73,7 +74,7 @@ class CoupledTensor():
         if method == "randn":
             for mmode in self.modes:
                 self.x["_"+mmode][:] = np.random.randn(*self.x["_"+mmode].shape)
-        if method == "svd":
+        if method in ["svd", "randomized_svd"]:
             for mmode in self.modes:
                 start_time = time.time()
                 unfold = self.unfold[mmode].copy()
@@ -82,7 +83,10 @@ class CoupledTensor():
                     si = IterativeSVD(ncol, max_iters=50)
                     unfold = si.fit_transform(unfold[:, ~np.all(np.isnan(unfold), axis=0)])
                     ncol = min(ncol, unfold.shape[1])   # case where num col in reduced unfold is even smaller
-                self.x["_"+mmode][:, :ncol] = np.linalg.svd(unfold)[0][:,:ncol]
+                if method == "svd":
+                    self.x["_" + mmode][:, :ncol] = np.linalg.svd(unfold)[0][:,:ncol]
+                else:   # randomized_svd
+                    self.x["_" + mmode][:, :ncol] = randomized_svd(unfold, ncol, random_state=2)[0]
                 if verbose:
                     print(f"{mmode} SVD initialization: done in {time.time() - start_time}")
         if method == "nmf":

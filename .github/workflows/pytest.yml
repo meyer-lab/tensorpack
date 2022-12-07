@@ -6,6 +6,7 @@ jobs:
   build:
     runs-on: self-hosted
     steps:
+    - uses: actions/checkout@v2
     - name: Install dependencies
       run: poetry install --no-root
     - name: Test with pytest
