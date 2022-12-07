@@ -21,7 +21,7 @@ def createCube(missing=0.0, size=(10, 20, 25)):
 def test_cmtf_R2X():
     """ Test to ensure R2X for higher components is larger. """
     arr = []
-    tensor, matrix = alter()["Fc"], alter()["gp120"]
+    tensor, matrix = alter()["Fc"].values, alter()["gp120"].values
     for i in range(1, 5):
         facT = perform_CMTF(tensor, matrix, r=i)
         assert np.all(np.isfinite(facT.factors[0]))
