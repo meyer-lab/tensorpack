@@ -10,7 +10,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tensorly import partial_svd
+from tensorly.tenalg import svd_interface
 import numpy as np
 
 
@@ -95,7 +95,8 @@ class IterativeSVD(object):
         X_filled = X
         for i in range(self.max_iters):
             curr_rank = self.rank
-            self.U, S, V = partial_svd(X_filled, curr_rank, random_state=self.random_state)
+            self.U, S, V = svd_interface(X_filled, method="truncated_svd", n_eigenvecs=curr_rank,
+                                         random_state=self.random_state)
             X_reconstructed = self.U @ np.diag(S) @ V
             X_reconstructed = self.clip(X_reconstructed)
 
