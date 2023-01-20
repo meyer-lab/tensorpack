@@ -2,7 +2,7 @@ import pickle
 from re import A
 import numpy as np
 from .cmtf import perform_CMTF, perform_CP, calcR2X
-from tensorly import partial_svd
+from tensorly.tenalg import svd_interface
 from .SVD_impute import IterativeSVD
 from .tucker import tucker_decomp
 from .impute import create_missingness, entry_drop, joint_entry_drop, chord_drop
@@ -49,7 +49,7 @@ class Decomposition():
         if not np.all(np.isfinite(flatData)):
             flatData = IterativeSVD(rank=1, random_state=1).fit_transform(flatData)
 
-        U, S, V = partial_svd(flatData, max(self.rrs))
+        U, S, V = svd_interface(flatData, method="truncated_svd", n_eigenvecs=max(self.rrs))
         scores = U @ np.diag(S)
         loadings = V
         recon = [scores[:, :rr] @ loadings[:rr, :] for rr in self.rrs]
@@ -148,7 +148,7 @@ class Decomposition():
                 mImp = np.reshape(np.moveaxis(tImp, 0, 0), (tImp.shape[0], -1))
 
                 missingMat = si.fit_transform(missingMat)
-                U, S, V = partial_svd(missingMat, max(self.rrs))
+                U, S, V = svd_interface(missingMat, method="truncated_svd", n_eigenvecs=max(self.rrs))
                 scores = U @ np.diag(S)
                 loadings = V
                 recon = [scores[:, :rr] @ loadings[:rr, :] for rr in self.rrs]

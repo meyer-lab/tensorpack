@@ -3,7 +3,7 @@ Coupled Matrix Tensor Factorization
 """
 
 import numpy as np
-from tensorly import partial_svd
+from tensorly.tenalg import svd_interface
 import tensorly as tl
 from tensorly.tenalg import khatri_rao
 from copy import deepcopy
@@ -182,7 +182,7 @@ def initialize_cp(tensor: np.ndarray, rank: int):
                 si = IterativeSVD(rank)
                 unfold = si.fit_transform(unfold)
 
-            factors[mode] = partial_svd(unfold, rank, flip=True)[0]
+            factors[mode] = svd_interface(unfold, method="truncated_svd", n_eigenvecs=rank, flip_sign=True)[0]
 
     return tl.cp_tensor.CPTensor((None, factors))
 
