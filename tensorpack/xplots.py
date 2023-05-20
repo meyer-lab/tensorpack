@@ -18,8 +18,12 @@ def xplot_components(data:xr.DataArray, rank: int, reorder=[]):
     ddims = len(data.dims)
     axes_names = list(data.dims)
 
-    factors = [pd.DataFrame(cp[1][rr], columns=[f"Cmp. {i}" for i in np.arange(1, rank + 1)],
-                            index=data.coords[axes_names[rr]]) for rr in range(ddims)]
+    factors = [pd.DataFrame(cp[1][rr],
+                            columns=[f"Cmp. {i}" for i in np.arange(1, rank + 1)],
+                            index=data.coords[axes_names[rr]].values  \
+                                if len(data.coords[axes_names[rr]].coords) <= 1 \
+                                else ["/".join(ss) for ss in data.coords["Analyte"].values])
+               for rr in range(ddims)]
 
     for r_ax in reorder:
         if isinstance(r_ax, int):
