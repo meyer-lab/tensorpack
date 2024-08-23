@@ -2,8 +2,8 @@
 
 from tensorly.decomposition import tucker
 import numpy as np
-import itertools as it
 import tensorly as tl
+from .linalg import calcR2X_TnB
 
 def tucker_decomp(tensor, num_comps: int):
     """ Performs Tucker decomposition.
@@ -29,10 +29,15 @@ def tucker_decomp(tensor, num_comps: int):
     if type(tensor) is not np.ndarray:
         tensor = tensor.to_numpy()
 
+    mask = np.isfinite(tensor)
+    tensor_filled = np.nan_to_num(tensor)
+
     # step 1 with 1 component along every dimension
     start = [1] * tensor.ndim
-    factors = [tucker(tensor, rank=start, svd='randomized_svd')]
-    min_err = [(tl.norm(tl.tucker_to_tensor(factors[0]) - tensor) ** 2) / tl.norm(tensor) ** 2]
+    factors = [tucker(tensor_filled, rank=start, svd='randomized_svd', mask=mask)]
+    err_top, err_bot = calcR2X_TnB(tensor, tl.tucker_to_tensor(factors[0]))
+
+    min_err = [1.0 - err_top / err_bot]
     min_rank = [start]
     ranks = min_rank * tensor.ndim
 
@@ -46,8 +51,10 @@ def tucker_decomp(tensor, num_comps: int):
             temp_rank[indx] = val[indx] + 1
 
             # calculate error for this rank combination
-            fac.append(tucker(tensor, rank=temp_rank, svd='randomized_svd'))
-            err.append((tl.norm(tl.tucker_to_tensor(fac[-1]) - tensor) ** 2) / tl.norm(tensor) ** 2)
+            fac.append(tucker(tensor_filled, rank=temp_rank, svd='randomized_svd', mask=mask))
+            err_top, err_bot = calcR2X_TnB(tensor, tl.tucker_to_tensor(factors[0]))
+
+            err.append(1.0 - err_top / err_bot)
             rnk.append(temp_rank)
 
         # pick the lowest error and continue with that

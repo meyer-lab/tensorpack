@@ -17,7 +17,7 @@ xarray = "^2024"
 scikit-learn = "^1.1.2"
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.2"
+pytest = "^7.0"
 pytest-cov = "^3.0.0"
 tensordata = { git = "https://github.com/meyer-lab/tensordata.git", branch = "main" }
 
