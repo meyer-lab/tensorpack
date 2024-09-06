@@ -63,7 +63,7 @@ class CoupledTensor():
         # wipe off old values
         self.x["_Weight_"][:] = np.ones_like(self.x["_Weight_"])
         for mmode in self.modes:
-            self.x["_" + mmode][:] = np.zeros_like(self.x["_" + mmode])
+            self.x["_" + mmode][:] = np.ones_like(self.x["_" + mmode])
 
         if method == "ones":
             for mmode in self.modes:
