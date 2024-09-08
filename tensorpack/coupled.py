@@ -1,3 +1,4 @@
+from copy import deepcopy
 import xarray as xr
 import numpy as np
 import tensorly as tl
@@ -22,7 +23,6 @@ def xr_unfold(data: xr.Dataset, mode: str):
 # a function to round a number to certain significant figures
 round_to_n = lambda x, n: x if x == 0 else round(x, -int(np.floor(np.log10(abs(x)))) + (n - 1))
 vround2 = np.vectorize(lambda x: round_to_n(x, 2))
-
 
 class CoupledTensor():
     def __init__(self, data: xr.Dataset, rank):
@@ -63,7 +63,7 @@ class CoupledTensor():
         # wipe off old values
         self.x["_Weight_"][:] = np.ones_like(self.x["_Weight_"])
         for mmode in self.modes:
-            self.x["_" + mmode][:] = np.zeros_like(self.x["_" + mmode])
+            self.x["_" + mmode][:] = np.ones_like(self.x["_" + mmode])
 
         if method == "ones":
             for mmode in self.modes:
@@ -194,20 +194,52 @@ class CoupledTensor():
         old_R2X = -np.inf
         tq = tqdm(range(maxiter), disable=(not progress))
 
+        gamma = 1.1
+        gamma_bar = 1.03
+        eta = 1.5
+        beta_i = 0.05
+        beta_i_bar = 1.0
+
         # missing value handling
         uniqueInfo = {}
         for mmode in self.modes:
             uniqueInfo[mmode] = np.unique(np.isfinite(self.unfold[mmode].T), axis=1, return_inverse=True)
 
         for i in tq:
+            jump = beta_i + 1.0
+            x_prev = deepcopy(self.x)
+
             # Solve on each mode
             for mmode in self.modes:
                 self.x["_"+mmode][:] = mlstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode], nonneg=nonneg).T
                 self.normalize_factors("norm")
+
+            # line search
+            x_ls = deepcopy(self.x)
+
+            for mmode in self.modes:
+                x_ls["_"+mmode][:] = x_prev["_"+mmode] + jump * (self.x["_"+mmode] - x_prev["_"+mmode])
+
+            x_cur = deepcopy(self.x)
             current_R2X = self.R2X()
+
+            self.x = x_ls
+            ls_R2X = self.R2X()
+
+            if ls_R2X > current_R2X:
+                current_R2X = ls_R2X
+                self.x = x_ls
+
+                beta_i = min(beta_i_bar, gamma * beta_i)
+                beta_i_bar = max(1.0, gamma_bar * beta_i_bar)
+            else:
+                beta_i_bar = beta_i
+                beta_i = beta_i / eta
+                self.x = x_cur
+            
             if verbose:
                 print(f"R2Xs at {i}: {[self.R2X(dvar) for dvar in self.dvars]}")
-            tq.set_postfix(refresh=False, R2X=current_R2X, delta=current_R2X-old_R2X)
+            tq.set_postfix(refresh=False, R2X=current_R2X, delta=current_R2X-old_R2X, jump=jump)
             if np.abs(current_R2X-old_R2X) < tol:
                 break
             old_R2X = current_R2X
