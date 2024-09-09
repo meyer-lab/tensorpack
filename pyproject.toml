@@ -16,10 +16,12 @@ svgutils = "^0.3.4"
 xarray = "^2024"
 scikit-learn = "^1.1.2"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "^7.0"
 pytest-cov = "^3.0.0"
 tensordata = { git = "https://github.com/meyer-lab/tensordata.git", branch = "main" }
+pyright = "^1.1.379"
+ruff = "^0.6.4"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

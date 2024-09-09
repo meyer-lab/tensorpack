@@ -1,11 +1,11 @@
-""" Tucker decomposition """
+"""Tucker decomposition"""
 
 import numpy as np
 from tensorly.decomposition import tucker
 
 
 def tucker_decomp(tensor, num_comps: int):
-    """ Performs Tucker decomposition.
+    """Performs Tucker decomposition.
 
     Parameters
     ----------
@@ -33,7 +33,14 @@ def tucker_decomp(tensor, num_comps: int):
 
     # step 1 with 1 component along every dimension
     start = [1] * tensor.ndim
-    ff, errors = tucker(tensor_filled, rank=start, svd='randomized_svd', tol=1e-8, mask=mask, return_errors=True)
+    ff, errors = tucker(
+        tensor_filled,
+        rank=start,
+        svd="randomized_svd",
+        tol=1e-8,
+        mask=mask,
+        return_errors=True,
+    )
     factors = [ff]
     min_err = [errors[-1] ** 2.0]
     min_rank = [start]
@@ -51,7 +58,14 @@ def tucker_decomp(tensor, num_comps: int):
                 continue
 
             # calculate error for this rank combination
-            ff, errors = tucker(tensor_filled, rank=temp_rank, svd='randomized_svd', tol=1e-8, mask=mask, return_errors=True)
+            ff, errors = tucker(
+                tensor_filled,
+                rank=temp_rank,
+                svd="randomized_svd",
+                tol=1e-8,
+                mask=mask,
+                return_errors=True,
+            )
             fac.append(ff)
             err.append(errors[-1] ** 2.0)
             rnk.append(temp_rank)

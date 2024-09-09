@@ -8,7 +8,8 @@ import seaborn as sns
 from matplotlib.ticker import ScalarFormatter
 from .decomposition import Decomposition
 
-def tfacr2x(ax, decomp:Decomposition):
+
+def tfacr2x(ax, decomp: Decomposition):
     """
     Plots R2X for tensor factorizations for all components up to decomp.max_rr.
 
@@ -41,7 +42,12 @@ def reduction(ax, decomp):
     decomp : Decomposition
         Takes a Decomposition object that has successfully run decomp.perform_tfac() and decomp.perform_PCA().
     """
-    CPR2X, PCAR2X, sizeTfac, sizePCA = np.asarray(decomp.TR2X), np.asarray(decomp.PCAR2X), decomp.sizeT, decomp.sizePCA
+    CPR2X, PCAR2X, sizeTfac, sizePCA = (
+        np.asarray(decomp.TR2X),
+        np.asarray(decomp.PCAR2X),
+        decomp.sizeT,
+        decomp.sizePCA,
+    )
     ax.set_xscale("log", base=2)
     ax.plot(sizeTfac, 1.0 - CPR2X, ".", label="TFac")
     ax.plot(sizePCA, 1.0 - PCAR2X, ".", label="PCA")
@@ -69,13 +75,13 @@ def q2xchord(ax, decomp):
     comps = decomp.rrs
     chords_df = pd.DataFrame(decomp.chordQ2X).T
     chords_df.index = comps
-    chords_df['mean'] = chords_df.mean(axis=1)
-    chords_df['sem'] = chords_df.sem(axis=1)
+    chords_df["mean"] = chords_df.mean(axis=1)
+    chords_df["sem"] = chords_df.sem(axis=1)
 
-    Q2Xchord = chords_df['mean']
-    Q2Xerrors = chords_df['sem']
+    Q2Xchord = chords_df["mean"]
+    Q2Xerrors = chords_df["sem"]
     ax.scatter(comps, Q2Xchord, s=10)
-    ax.errorbar(comps, Q2Xchord, yerr=Q2Xerrors, fmt='none')
+    ax.errorbar(comps, Q2Xchord, yerr=Q2Xerrors, fmt="none")
     ax.set_ylabel("Q2X of Chord Imputation")
     ax.set_xlabel("Number of Components")
     ax.set_xticks([x for x in comps])
@@ -83,7 +89,7 @@ def q2xchord(ax, decomp):
     ax.set_ylim(bottom=0.0, top=1.0)
 
 
-def q2xentry(ax, decomp, methodname = "CP"):
+def q2xentry(ax, decomp, methodname="CP"):
     """
     Plots Q2X for tensor factorization versus PCA when removing entries for all components up to decomp.max_rr.
     Requires multiple runs to generate error bars.
@@ -95,27 +101,27 @@ def q2xentry(ax, decomp, methodname = "CP"):
     decomp : Decomposition
         Takes a Decomposition object that has successfully run decomp.entry().
     methodname : str
-        Allows for proper tensor method when naming graph axes. 
+        Allows for proper tensor method when naming graph axes.
     """
     entry_df = pd.DataFrame(decomp.entryQ2X).T
     entrypca_df = pd.DataFrame(decomp.entryQ2XPCA).T
     comps = decomp.rrs
 
     entry_df.index = comps
-    entry_df['mean'] = entry_df.mean(axis=1)
-    entry_df['sem'] = entry_df.sem(axis=1)
+    entry_df["mean"] = entry_df.mean(axis=1)
+    entry_df["sem"] = entry_df.sem(axis=1)
     entrypca_df.index = comps
-    entrypca_df['mean'] = entrypca_df.mean(axis=1)
-    entrypca_df['sem'] = entrypca_df.sem(axis=1)
+    entrypca_df["mean"] = entrypca_df.mean(axis=1)
+    entrypca_df["sem"] = entrypca_df.sem(axis=1)
 
-    TR2X = entry_df['mean']
-    TErr = entry_df['sem']
-    PCAR2X = entrypca_df['mean']
-    PCAErr = entrypca_df['sem']
+    TR2X = entry_df["mean"]
+    TErr = entry_df["sem"]
+    PCAR2X = entrypca_df["mean"]
+    PCAErr = entrypca_df["sem"]
     ax.plot(comps - 0.05, TR2X, ".", label=methodname)
     ax.plot(comps + 0.05, PCAR2X, ".", label="PCA")
-    ax.errorbar(comps - 0.05, TR2X, yerr=TErr, fmt='none', ecolor='b')
-    ax.errorbar(comps + 0.05, PCAR2X, yerr=PCAErr, fmt='none', ecolor='darkorange')
+    ax.errorbar(comps - 0.05, TR2X, yerr=TErr, fmt="none", ecolor="b")
+    ax.errorbar(comps + 0.05, PCAR2X, yerr=PCAErr, fmt="none", ecolor="darkorange")
     ax.set_ylabel("Q2X of Entry Imputation")
     ax.set_xlabel("Number of Components")
     ax.set_xticks([x for x in comps])
@@ -124,8 +130,8 @@ def q2xentry(ax, decomp, methodname = "CP"):
     ax.legend(loc=4)
 
 
-def tucker_reduced_Dsize(tensor, ranks:list):
-    """ Output the error (1 - r2x) for each size of the data at each component # for tucker decomposition.
+def tucker_reduced_Dsize(tensor, ranks: list):
+    """Output the error (1 - r2x) for each size of the data at each component # for tucker decomposition.
     This forms the x-axis of the error vs. data size plot.
 
     Parameters
@@ -153,11 +159,12 @@ def tucker_reduced_Dsize(tensor, ranks:list):
 
     return sizes
 
-def tucker_reduction(ax, decomp:Decomposition, cp_decomp:Decomposition):
-    """ Error versus data size for minimum error combination of rank from Tucker decomposition versus CP decomposition.
+
+def tucker_reduction(ax, decomp: Decomposition, cp_decomp: Decomposition):
+    """Error versus data size for minimum error combination of rank from Tucker decomposition versus CP decomposition.
     The error for those combinations that are the same dimensions, ie., for a 3-D tensor, [1, 1, 1], [2, 2, 2], etc
     are shown by a different marker shape and color.
-    
+
     Parameters
     ----------
     ax : axis object
@@ -189,16 +196,17 @@ def tucker_reduction(ax, decomp:Decomposition, cp_decomp:Decomposition):
     cp_decomp.perform_tfac()
     CPR2X, sizeTfac = np.asarray(cp_decomp.TR2X), cp_decomp.sizeT
 
-    ax.plot(sizes, decomp.TuckErr, label="Tucker", color='C0', lw=3)
-    ax.plot(sizeTfac, 1.0 - CPR2X, ".", label="CP", color='C1', markersize=12)
+    ax.plot(sizes, decomp.TuckErr, label="Tucker", color="C0", lw=3)
+    ax.plot(sizeTfac, 1.0 - CPR2X, ".", label="CP", color="C1", markersize=12)
     ax.set_ylim((0.0, 1.0))
     ax.set_xscale("log", base=2)
-    ax.set_title('Data Reduction Comparison')
-    ax.set_ylabel('Normalized Unexplained Variance')
-    ax.set_xlabel('Size of Reduced Data')
+    ax.set_title("Data Reduction Comparison")
+    ax.set_ylabel("Normalized Unexplained Variance")
+    ax.set_xlabel("Size of Reduced Data")
     ax.legend()
 
-def plot_weight_mode(ax, factor, labels=False, title = ""):
+
+def plot_weight_mode(ax, factor, labels=False, title=""):
     """
     Plots heatmaps for a single mode factors.
 
@@ -215,12 +223,23 @@ def plot_weight_mode(ax, factor, labels=False, title = ""):
     """
     rank = np.shape(factor)[1]
     components = [str(ii + 1) for ii in range(rank)]
-    facs = pd.DataFrame(factor, columns=[f"Cmp. {i}" for i in np.arange(1, rank + 1)],
-                        index=labels if labels is not False else list(range(np.shape(factor)[0])))
+    facs = pd.DataFrame(
+        factor,
+        columns=[f"Cmp. {i}" for i in range(1, rank + 1)],
+        index=labels if labels is not False else list(range(np.shape(factor)[0])),
+    )
 
-    sns.heatmap(facs, cmap="PiYG", center=0, xticklabels=components, yticklabels=labels, cbar=True, vmin=-1.0,
-                vmax=1.0, ax=ax)
+    sns.heatmap(
+        facs,
+        cmap="PiYG",
+        center=0,
+        xticklabels=components,
+        yticklabels=labels,
+        cbar=True,
+        vmin=-1.0,
+        vmax=1.0,
+        ax=ax,
+    )
 
     ax.set_xlabel("Components")
     ax.set_title(title)
-
