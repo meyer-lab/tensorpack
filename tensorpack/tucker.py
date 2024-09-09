@@ -1,12 +1,11 @@
-""" Tucker decomposition """
+"""Tucker decomposition"""
 
-from tensorly.decomposition import tucker
 import numpy as np
-import itertools as it
-import tensorly as tl
+from tensorly.decomposition import tucker
+
 
 def tucker_decomp(tensor, num_comps: int):
-    """ Performs Tucker decomposition.
+    """Performs Tucker decomposition.
 
     Parameters
     ----------
@@ -29,15 +28,25 @@ def tucker_decomp(tensor, num_comps: int):
     if type(tensor) is not np.ndarray:
         tensor = tensor.to_numpy()
 
+    mask = np.isfinite(tensor)
+    tensor_filled = np.nan_to_num(tensor)
+
     # step 1 with 1 component along every dimension
     start = [1] * tensor.ndim
-    factors = [tucker(tensor, rank=start, svd='randomized_svd')]
-    min_err = [(tl.norm(tl.tucker_to_tensor(factors[0]) - tensor) ** 2) / tl.norm(tensor) ** 2]
+    ff, errors = tucker(
+        tensor_filled,
+        rank=start,
+        svd="randomized_svd",
+        tol=1e-8,
+        mask=mask,
+        return_errors=True,
+    )
+    factors = [ff]
+    min_err = [errors[-1] ** 2.0]
     min_rank = [start]
     ranks = min_rank * tensor.ndim
 
     for _ in range(tensor.ndim * num_comps):
-
         fac = []
         err = []
         rnk = []
@@ -45,9 +54,20 @@ def tucker_decomp(tensor, num_comps: int):
             temp_rank = val.copy()
             temp_rank[indx] = val[indx] + 1
 
+            if temp_rank[indx] > tensor.shape[indx]:
+                continue
+
             # calculate error for this rank combination
-            fac.append(tucker(tensor, rank=temp_rank, svd='randomized_svd'))
-            err.append((tl.norm(tl.tucker_to_tensor(fac[-1]) - tensor) ** 2) / tl.norm(tensor) ** 2)
+            ff, errors = tucker(
+                tensor_filled,
+                rank=temp_rank,
+                svd="randomized_svd",
+                tol=1e-8,
+                mask=mask,
+                return_errors=True,
+            )
+            fac.append(ff)
+            err.append(errors[-1] ** 2.0)
             rnk.append(temp_rank)
 
         # pick the lowest error and continue with that
