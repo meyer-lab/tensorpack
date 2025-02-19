@@ -58,7 +58,7 @@ class CoupledTensor():
         self.unfold = {mode: xr_unfold(data, mode) for mode in self.modes}
 
 
-    def initialize(self, method="svd", verbose=False):
+    def initialize(self, method="svd", verbose=False, random_state=215):
         """ Initialize each mode factor matrix """
         # wipe off old values
         self.x["_Weight_"][:] = np.ones_like(self.x["_Weight_"])
@@ -86,7 +86,7 @@ class CoupledTensor():
                 if method == "svd":
                     self.x["_" + mmode][:, :ncol] = np.linalg.svd(unfold)[0][:,:ncol]
                 else:   # randomized_svd
-                    self.x["_" + mmode][:, :ncol] = randomized_svd(unfold, ncol, random_state=2)[0]
+                    self.x["_" + mmode][:, :ncol] = randomized_svd(unfold, ncol, random_state=random_state)[0]
                 if verbose:
                     print(f"{mmode} SVD initialization: done in {time.time() - start_time}")
         if method == "nmf":
