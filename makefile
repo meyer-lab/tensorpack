@@ -1,4 +1,4 @@
-.PHONY: clean test
+.PHONY: clean test vulture
 
 all: test
 
@@ -10,3 +10,6 @@ coverage.xml:
 
 clean:
 	rm -rf coverage.xml
+
+vulture:
+	uv run vulture
