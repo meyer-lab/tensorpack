@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib.ticker import ScalarFormatter
+
 from .decomposition import Decomposition
 
 

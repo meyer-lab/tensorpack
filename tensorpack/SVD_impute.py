@@ -10,22 +10,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tensorly.tenalg import svd_interface
 import numpy as np
+from tensorly.tenalg import svd_interface
 
 
-class IterativeSVD(object):
+class IterativeSVD:
     def __init__(
-            self,
-            rank,
-            convergence_threshold=1e-7,
-            max_iters=500,
-            random_state=None,
-            min_value=None,
-            max_value=None,
-            verbose=False):
-        self.min_value=min_value
-        self.max_value=max_value
+        self,
+        rank,
+        convergence_threshold=1e-7,
+        max_iters=500,
+        random_state=None,
+        min_value=None,
+        max_value=None,
+        verbose=False,
+    ):
+        self.min_value = min_value
+        self.max_value = max_value
         self.rank = rank
         self.max_iters = max_iters
         self.convergence_threshold = convergence_threshold
@@ -81,11 +82,10 @@ class IterativeSVD(object):
         old_missing_values = X_old[missing_mask]
         new_missing_values = X_new[missing_mask]
         difference = old_missing_values - new_missing_values
-        ssd = np.sum(difference ** 2)
-        old_norm_squared = (old_missing_values ** 2).sum()
+        ssd = np.sum(difference**2)
+        old_norm_squared = (old_missing_values**2).sum()
         # edge cases
-        if old_norm_squared == 0 or \
-                (old_norm_squared < F32PREC and ssd > F32PREC):
+        if old_norm_squared == 0 or (old_norm_squared < F32PREC and ssd > F32PREC):
             return False
         else:
             return (ssd / old_norm_squared) < self.convergence_threshold
@@ -95,8 +95,12 @@ class IterativeSVD(object):
         X_filled = X
         for i in range(self.max_iters):
             curr_rank = self.rank
-            self.U, S, V = svd_interface(X_filled, method="truncated_svd", n_eigenvecs=curr_rank,
-                                         random_state=self.random_state)
+            self.U, S, V = svd_interface(
+                X_filled,
+                method="truncated_svd",
+                n_eigenvecs=curr_rank,
+                random_state=self.random_state,
+            )
             X_reconstructed = self.U @ np.diag(S) @ V
             X_reconstructed = self.clip(X_reconstructed)
 
@@ -104,13 +108,10 @@ class IterativeSVD(object):
             mae = np.mean(np.abs(X[observed_mask] - X_reconstructed[observed_mask]))
 
             if self.verbose:
-                print(
-                    "[IterativeSVD] Iter %d: observed MAE=%0.6f" % (
-                        i + 1, mae))
+                print(f"[IterativeSVD] Iter {i + 1}: observed MAE={mae:0.6f}")
             converged = self._converged(
-                X_old=X_filled,
-                X_new=X_reconstructed,
-                missing_mask=missing_mask)
+                X_old=X_filled, X_new=X_reconstructed, missing_mask=missing_mask
+            )
             X_filled[missing_mask] = X_reconstructed[missing_mask]
             if converged:
                 break

@@ -1,13 +1,23 @@
 """
 Unit test file.
 """
+
+import warnings
+
 import numpy as np
 import tensorly as tl
-import warnings
+from tensordata.alter import data as alter
 from tensorly.cp_tensor import _validate_cp_tensor
 from tensorly.random import random_cp
-from ..cmtf import perform_CMTF, delete_component, calcR2X, buildMat, sort_factors, perform_CP
-from tensordata.alter import data as alter
+
+from ..cmtf import (
+    buildMat,
+    calcR2X,
+    delete_component,
+    perform_CMTF,
+    perform_CP,
+    sort_factors,
+)
 
 
 def createCube(missing=0.0, size=(10, 20, 25)):
@@ -19,7 +29,7 @@ def createCube(missing=0.0, size=(10, 20, 25)):
 
 
 def test_cmtf_R2X():
-    """ Test to ensure R2X for higher components is larger. """
+    """Test to ensure R2X for higher components is larger."""
     arr = []
     tensor, matrix = alter()["Fc"].values, alter()["gp120"].values
     for i in range(1, 5):
@@ -35,7 +45,9 @@ def test_cmtf_R2X():
     assert np.min(arr) >= 0
     assert np.max(arr) <= 1
     if arr[2] < 0.87:
-        warnings.warn("CMTF (r=3) on Alter dataset, R2X = " + str(arr[2]) + " < 0.87 (expected)")
+        warnings.warn(
+            "CMTF (r=3) on Alter dataset, R2X = " + str(arr[2]) + " < 0.87 (expected)"
+        )
 
 
 def test_cp():
@@ -46,7 +58,9 @@ def test_cp():
     assert fac3.R2X < fac6.R2X
     assert fac3.R2X > 0.0
     if fac3.R2X < 0.67:
-        warnings.warn("CP (r=3) with 20% missingness, R2X < 0.67 (expected)" + str(fac3.R2X))
+        warnings.warn(
+            "CP (r=3) with 20% missingness, R2X < 0.67 (expected)" + str(fac3.R2X)
+        )
 
     # test case where mode size < rank
     tensor2 = createCube(missing=0.2, size=(10, 4, 50))
@@ -57,7 +71,7 @@ def test_cp():
 
 
 def test_delete():
-    """ Test deleting a component results in a valid tensor. """
+    """Test deleting a component results in a valid tensor."""
     tOrig = createCube(missing=0.2, size=(10, 20, 25))
     mOrig = createCube(missing=0.05, size=(10, 15))
     facT = perform_CMTF(tOrig, mOrig, r=4)
@@ -74,7 +88,7 @@ def test_delete():
 
 
 def test_sort():
-    """ Test that sorting does not affect anything. """
+    """Test that sorting does not affect anything."""
     tOrig = createCube(missing=0.2, size=(10, 20, 25))
     mOrig = createCube(missing=0.2, size=(10, 15))
 

@@ -43,7 +43,7 @@ def getSetup(figsize, gridd, multz=None, empts=None):
         empts = []
 
     if multz is None:
-        multz = dict()
+        multz = {}
 
     # Setup plotting space and grid
     f = plt.figure(figsize=figsize, constrained_layout=True)
@@ -51,11 +51,11 @@ def getSetup(figsize, gridd, multz=None, empts=None):
 
     # Get list of axis objects
     x = 0
-    ax = list()
+    ax = []
     while x < gridd[0] * gridd[1]:
-        if x not in empts and x not in multz.keys():  # If this is just a normal subplot
+        if x not in empts and x not in multz:  # If this is just a normal subplot
             ax.append(f.add_subplot(gs1[x]))
-        elif x in multz.keys():  # If this is a subplot that spans grid elements
+        elif x in multz:  # If this is a subplot that spans grid elements
             ax.append(f.add_subplot(gs1[x : x + multz[x] + 1]))
             x += multz[x]
         x += 1

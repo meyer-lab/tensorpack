@@ -1,5 +1,7 @@
 import numpy as np
-from ..linalg import mlstsq, lstsq_
+
+from ..linalg import lstsq_, mlstsq
+
 
 def test_regular_lstsq():
     A = np.random.rand(10, 8)

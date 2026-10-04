@@ -2,29 +2,28 @@
 Coupled Matrix Tensor Factorization
 """
 
-import numpy as np
-from tensorly.tenalg import svd_interface
-import tensorly as tl
-from tensorly.tenalg import khatri_rao
 from copy import deepcopy
-from tensorly.decomposition._cp import initialize_cp
+
+import numpy as np
+import tensorly as tl
+from tensorly.tenalg import khatri_rao, svd_interface
 from tqdm import tqdm
+
+from .linalg import calcR2X_TnB, mlstsq
 from .SVD_impute import IterativeSVD
-from .linalg import mlstsq, calcR2X_TnB
 
-
-tl.set_backend('numpy')
+tl.set_backend("numpy")
 
 
 def buildMat(tFac):
-    """ Build the matrix in CMTF from the factors. """
-    if hasattr(tFac, 'mWeights'):
+    """Build the matrix in CMTF from the factors."""
+    if hasattr(tFac, "mWeights"):
         return tFac.factors[0] @ (tFac.mFactor * tFac.mWeights).T
     return tFac.factors[0] @ tFac.mFactor.T
 
 
 def calcR2X(tFac, tIn=None, mIn=None):
-    """ Calculate R2X. Optionally it can be calculated for only the tensor or matrix. """
+    """Calculate R2X. Optionally it can be calculated for only the tensor or matrix."""
     assert (tIn is not None) or (mIn is not None)
     vTop, vBottom = 0.0, 0.0
 
@@ -41,17 +40,17 @@ def calcR2X(tFac, tIn=None, mIn=None):
 
 
 def tensor_degFreedom(tFac) -> int:
-    """ Calculate the degrees of freedom within a tensor factorization. """
+    """Calculate the degrees of freedom within a tensor factorization."""
     deg = np.sum([f.size for f in tFac.factors])
 
-    if hasattr(tFac, 'mFactor'):
+    if hasattr(tFac, "mFactor"):
         deg += tFac.mFactor.size
 
     return deg
 
 
 def reorient_factors(tFac):
-    """ This function ensures that factors are negative on at most one direction. """
+    """This function ensures that factors are negative on at most one direction."""
     # Flip the types to be positive
     tMeans = np.sign(np.mean(tFac.factors[2], axis=0))
     tFac.factors[1] *= tMeans[np.newaxis, :]
@@ -62,13 +61,13 @@ def reorient_factors(tFac):
     tFac.factors[0] *= rMeans[np.newaxis, :]
     tFac.factors[1] *= rMeans[np.newaxis, :]
 
-    if hasattr(tFac, 'mFactor'):
+    if hasattr(tFac, "mFactor"):
         tFac.mFactor *= rMeans[np.newaxis, :]
     return tFac
 
 
 def sort_factors(tFac):
-    """ Sort the components from the largest variance to the smallest. """
+    """Sort the components from the largest variance to the smallest."""
     tensor = deepcopy(tFac)
 
     # Variance separated by component
@@ -77,15 +76,21 @@ def sort_factors(tFac):
         norm *= np.sum(np.square(factor), axis=0)
 
     # Add the variance of the matrix
-    if hasattr(tFac, 'mFactor'):
-        norm += np.sum(np.square(tFac.factors[0]), axis=0) * np.sum(np.square(tFac.mFactor), axis=0) * tFac.mWeights
+    if hasattr(tFac, "mFactor"):
+        norm += (
+            np.sum(np.square(tFac.factors[0]), axis=0)
+            * np.sum(np.square(tFac.mFactor), axis=0)
+            * tFac.mWeights
+        )
 
     order = np.flip(np.argsort(norm))
     tensor.weights = tensor.weights[order]
     tensor.factors = [fac[:, order] for fac in tensor.factors]
-    np.testing.assert_allclose(tl.cp_to_tensor(tFac), tl.cp_to_tensor(tensor), atol=1e-9)
+    np.testing.assert_allclose(
+        tl.cp_to_tensor(tFac), tl.cp_to_tensor(tensor), atol=1e-9
+    )
 
-    if hasattr(tFac, 'mFactor'):
+    if hasattr(tFac, "mFactor"):
         tensor.mFactor = tensor.mFactor[:, order]
         tensor.mWeights = tensor.mWeights[order]
         np.testing.assert_allclose(buildMat(tFac), buildMat(tensor), atol=1e-9)
@@ -94,7 +99,7 @@ def sort_factors(tFac):
 
 
 def delete_component(tFac, compNum):
-    """ Delete the indicated component. """
+    """Delete the indicated component."""
     tensor = deepcopy(tFac)
     compNum = np.array(compNum, dtype=int)
 
@@ -105,7 +110,7 @@ def delete_component(tFac, compNum):
     tensor.rank -= compNum.size
     tensor.weights = np.delete(tensor.weights, compNum)
 
-    if hasattr(tFac, 'mFactor'):
+    if hasattr(tFac, "mFactor"):
         tensor.mFactor = np.delete(tensor.mFactor, compNum, axis=1)
         tensor.mWeights = np.delete(tensor.mWeights, compNum)
 
@@ -113,13 +118,12 @@ def delete_component(tFac, compNum):
     return tensor
 
 
-
 def cp_normalize(tFac):
-    """ Normalize the factors using the inf norm. """
+    """Normalize the factors using the inf norm."""
     for i, factor in enumerate(tFac.factors):
         scales = np.linalg.norm(factor, ord=np.inf, axis=0)
         tFac.weights *= scales
-        if i == 0 and hasattr(tFac, 'mFactor'):
+        if i == 0 and hasattr(tFac, "mFactor"):
             mScales = np.linalg.norm(tFac.mFactor, ord=np.inf, axis=0)
             tFac.mWeights = scales * mScales
             tFac.mFactor /= mScales
@@ -172,7 +176,7 @@ def initialize_cp(tensor: np.ndarray, rank: int):
         An initial cp tensor.
     """
     factors = [np.ones((tensor.shape[i], rank)) for i in range(tensor.ndim)]
-    contain_missing = (np.sum(~np.isfinite(tensor)) > 0)
+    contain_missing = np.sum(~np.isfinite(tensor)) > 0
 
     # SVD init mode whose size is larger than rank
     for mode in range(tensor.ndim):
@@ -182,14 +186,17 @@ def initialize_cp(tensor: np.ndarray, rank: int):
                 si = IterativeSVD(rank)
                 unfold = si.fit_transform(unfold)
 
-            factors[mode] = svd_interface(unfold, method="truncated_svd", n_eigenvecs=rank, flip_sign=True)[0]
+            factors[mode] = svd_interface(
+                unfold, method="truncated_svd", n_eigenvecs=rank, flip_sign=True
+            )[0]
 
     return tl.cp_tensor.CPTensor((None, factors))
 
 
 def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, callback=None):
-    """ Perform CP decomposition. """
-    if callback: callback.begin()
+    """Perform CP decomposition."""
+    if callback:
+        callback.begin()
     tFac = initialize_cp(tOrig, r)
 
     # Pre-unfold
@@ -197,10 +204,13 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, callback=None):
 
     R2X_last = -np.inf
     tFac.R2X = calcR2X(tFac, tOrig)
-    if callback: callback.first_entry(tFac)
+    if callback:
+        callback.first_entry(tFac)
 
     # Precalculate the missingness patterns
-    uniqueInfo = [np.unique(np.isfinite(B.T), axis=1, return_inverse=True) for B in unfolded]
+    uniqueInfo = [
+        np.unique(np.isfinite(B.T), axis=1, return_inverse=True) for B in unfolded
+    ]
 
     tq = tqdm(range(maxiter), disable=(not progress))
     for i in tq:
@@ -213,7 +223,8 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, callback=None):
         tFac.R2X = calcR2X(tFac, tOrig)
         tq.set_postfix(R2X=tFac.R2X, delta=tFac.R2X - R2X_last, refresh=False)
         assert tFac.R2X > 0.0
-        if callback: callback.update(tFac)
+        if callback:
+            callback.update(tFac)
 
         if tFac.R2X - R2X_last < tol:
             break
@@ -223,12 +234,12 @@ def perform_CP(tOrig, r=6, tol=1e-6, maxiter=50, progress=False, callback=None):
 
     if r > 1:
         tFac = sort_factors(tFac)
-    
+
     return tFac
 
 
 def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, progress=True):
-    """ Perform CMTF decomposition. """
+    """Perform CMTF decomposition."""
     assert tOrig.dtype == float
     assert mOrig.dtype == float
     tFac = initialize_cmtf(tOrig, mOrig, r)

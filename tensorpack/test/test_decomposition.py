@@ -3,12 +3,14 @@ Testing Decomposition
 """
 
 import os
+
 import numpy as np
 import tensorly as tl
-from tensorly.random import random_cp
-from ..decomposition import Decomposition
-from ..cmtf import perform_CP, calcR2X
 from tensordata.atyeo import data as atyeo
+from tensorly.random import random_cp
+
+from ..cmtf import calcR2X, perform_CP
+from ..decomposition import Decomposition
 from ..SVD_impute import IterativeSVD
 from ..tucker import tucker_decomp
 
