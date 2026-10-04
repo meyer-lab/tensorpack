@@ -13,5 +13,7 @@ jobs:
       run: uv sync
     - name: Run ty check
       run: make ty
+    - name: Run vulture
+      run: make vulture
     - name: Test with pytest
       run: make test
