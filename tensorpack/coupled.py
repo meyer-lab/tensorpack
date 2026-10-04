@@ -212,7 +212,7 @@ class CoupledTensor():
             # Solve on each mode
             for mmode in self.modes:
                 self.x["_"+mmode][:] = mlstsq(self.khatri_rao(mmode), self.unfold[mmode].T, uniqueInfo[mmode], nonneg=nonneg).T
-                self.normalize_factors("norm")
+                self.normalize_factors("norm", check=False)
 
             # line search
             x_ls = deepcopy(self.x)
@@ -246,9 +246,10 @@ class CoupledTensor():
 
         self.normalize_factors("max")
 
-    def normalize_factors(self, method="max"):
-        """ Normalize factor matrix, either by L0 or L2 norm, and shift weights to the weight matrix """
-        current_R2X = self.R2X()
+    def normalize_factors(self, method="max", check=True):
+        """ Normalize factor matrix, either by L0 or L2 norm, and shift weights to the weight matrix.
+        If check is True, verify that normalizing left R2X unchanged (slow: evaluates R2X twice)."""
+        current_R2X = self.R2X() if check else None
         # Normalize factors
         for mmode in self.modes:
             sol = self.x["_" + mmode]
@@ -264,7 +265,7 @@ class CoupledTensor():
             # if norm is 0, leave as it is to avoid divide by 0 (the factors are all 0 anyway)
             nonzero_terms = norm_vec != 0
             self.x["_" + mmode][:, nonzero_terms] = sol[:, nonzero_terms] / norm_vec[nonzero_terms]
-        if abs(current_R2X - self.R2X()) / current_R2X > 1e-6:
+        if check and abs(current_R2X - self.R2X()) / current_R2X > 1e-6:
             raise RuntimeError(f"normalize_factors() causes R2X change: from {current_R2X} to {self.R2X()}")
 
 

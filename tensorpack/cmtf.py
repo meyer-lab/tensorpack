@@ -241,12 +241,14 @@ def perform_CMTF(tOrig, mOrig, r=9, tol=1e-6, maxiter=50, progress=True):
 
     # Precalculate the missingness patterns
     uniqueInfo = np.unique(np.isfinite(unfolded.T), axis=1, return_inverse=True)
+    tUnfolded = {m: tl.unfold(tOrig, m).T for m in [1, 2]}
+    tUniqueInfo = {m: np.unique(np.isfinite(tUnfolded[m]), axis=1, return_inverse=True) for m in [1, 2]}
 
     tq = tqdm(range(maxiter), disable=(not progress))
     for _ in tq:
         for m in [1, 2]:
             kr = khatri_rao(tFac.factors, skip_matrix=m)
-            tFac.factors[m] = mlstsq(kr, tl.unfold(tOrig, m).T).T
+            tFac.factors[m] = mlstsq(kr, tUnfolded[m], tUniqueInfo[m]).T
 
         # Solve for the glycan matrix fit
         tFac.mFactor = mlstsq(tFac.factors[0][missingM, :], mOrig[missingM, :]).T

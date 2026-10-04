@@ -23,6 +23,7 @@ dev = [
     "tensordata",
     "pyright>=1.1.379",
     "ruff>=0.6.4",
+    "pytest-xdist>=3.8.0",
 ]
 
 [tool.uv.sources]
@@ -36,3 +37,14 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["tensorpack"]
+
+[tool.pytest.ini_options]
+addopts = "-n auto"
+testpaths = ["tensorpack"]
+filterwarnings = [
+    "error",
+    # xarray (third party) triggers this on import under NumPy >= 2.
+    "ignore:The 'generic' unit for NumPy timedelta is deprecated:DeprecationWarning",
+    # NMF initialization on random dense data legitimately hits max_iter.
+    "ignore:Maximum number of iterations .* reached:sklearn.exceptions.ConvergenceWarning",
+]
