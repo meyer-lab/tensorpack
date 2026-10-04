@@ -89,12 +89,16 @@ def xplot_components(data: xr.DataArray, rank: int, reorder=None):
 def reorder_table(df):
     """
     Reorder a table's rows using hierarchical clustering.
-    Parameters:
-        df (pandas.DataFrame): data to be clustered; rows are treated as samples
-            to be clustered
-    Returns:
-        df (pandas.DataFrame): data with rows reordered via heirarchical
-            clustering
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Data to be clustered; rows are treated as samples to be clustered.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Data with rows reordered via hierarchical clustering.
     """
     y = sch.linkage(df.to_numpy(), method="centroid")
     index = sch.dendrogram(y, orientation="right", no_plot=True)["leaves"]

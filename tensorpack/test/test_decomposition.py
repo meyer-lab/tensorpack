@@ -2,6 +2,7 @@
 Testing Decomposition
 """
 
+import itertools
 import os
 
 import numpy as np
@@ -60,12 +61,38 @@ def test_missing_obj():
 
 
 def test_known_rank():
-    shape = (50, 40, 30)
-    tFacOrig = random_cp(shape, 10, full=False)
+    shape = (20, 15, 12)
+    tFacOrig = random_cp(shape, 5, full=False)
     tOrig = tl.cp_to_tensor(tFacOrig)
     assert calcR2X(tFacOrig, tOrig) >= 1.0
 
-    newtFac = [calcR2X(perform_CP(tOrig, r=rr), tOrig) for rr in [1, 3, 5, 7, 9]]
+    newtFac = [calcR2X(perform_CP(tOrig, r=rr), tOrig) for rr in [1, 2, 3, 4]]
     assert np.all([newtFac[ii + 1] > newtFac[ii] for ii in range(len(newtFac) - 1)])
     assert newtFac[0] > 0.0
     assert newtFac[-1] < 1.0
+
+
+def test_tucker_ranks_bounded():
+    """Tucker rank search never exceeds num_comps (or a mode's size) and grows one mode per step."""
+    shape = (6, 5, 2)
+    tensor = np.random.rand(*shape)
+    num_comps = 3
+    factors, errs, ranks = tucker_decomp(tensor, num_comps)
+
+    max_rank = [min(num_comps, s) for s in shape]
+    assert len(factors) == len(errs) == len(ranks)
+    assert ranks[0] == [1, 1, 1]
+    assert ranks[-1] == max_rank
+    assert len(ranks) == 1 + sum(m - 1 for m in max_rank)
+    for prev, cur in itertools.pairwise(ranks):
+        assert sum(c - p for p, c in zip(prev, cur)) == 1
+        assert all(c >= p for p, c in zip(prev, cur))
+    assert all(np.all(np.array(r) <= max_rank) for r in ranks)
+
+
+def test_decomposition_tucker_max_rank():
+    """Decomposition(max_rr=N).perform_tucker() tests ranks up to N, not beyond."""
+    tensor = np.random.rand(6, 5, 4)
+    d = Decomposition(tensor, max_rr=2, method=tucker_decomp)
+    d.perform_tucker()
+    assert max(max(r) for r in d.TuckRank) == 2

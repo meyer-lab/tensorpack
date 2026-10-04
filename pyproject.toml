@@ -3,7 +3,9 @@ name = "tensorpack"
 version = "0.1.2"
 description = "A collection of tensor methods from the Meyer lab."
 authors = [{ name = "Cyrillus Tan", email = "cyztan@gmail.com" }]
+readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11,<3.13"
 dependencies = [
     "numpy>=1.21",
@@ -15,7 +17,15 @@ dependencies = [
     "scikit-learn>=1.1.2",
 ]
 
+[project.urls]
+Homepage = "https://github.com/meyer-lab/tensorpack"
+Repository = "https://github.com/meyer-lab/tensorpack"
+
 [dependency-groups]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=3.0.0",
@@ -23,6 +33,7 @@ dev = [
     "ty>=0.0.1",
     "ruff>=0.16.1",
     "pre-commit>=4.0",
+    "pytest-xdist>=3.8.0",
     "vulture>=2.16",
 ]
 
@@ -41,6 +52,17 @@ packages = ["tensorpack"]
 [tool.ruff.lint.per-file-ignores]
 # Public module name kept for backwards compatibility.
 "tensorpack/SVD_impute.py" = ["N999"]
+
+[tool.pytest.ini_options]
+addopts = "-n auto"
+testpaths = ["tensorpack"]
+filterwarnings = [
+    "error",
+    # xarray (third party) triggers this on import under NumPy >= 2.
+    "ignore:The 'generic' unit for NumPy timedelta is deprecated:DeprecationWarning",
+    # NMF initialization on random dense data legitimately hits max_iter.
+    "ignore:Maximum number of iterations .* reached:sklearn.exceptions.ConvergenceWarning",
+]
 
 [tool.ty.src]
 include = ["tensorpack"]
