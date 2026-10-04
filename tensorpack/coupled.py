@@ -7,6 +7,7 @@ from tensorly.cp_tensor import CPTensor
 from numpy.linalg import norm
 from tqdm import tqdm
 from .SVD_impute import IterativeSVD
+from tensorly.tenalg import khatri_rao  # ty: ignore[unresolved-import]  # backend-dispatched at runtime
 from .linalg import mlstsq, calcR2X_TnB
 from sklearn.decomposition import NMF
 from sklearn.utils.extmath import randomized_svd
@@ -35,8 +36,8 @@ class CoupledTensor():
 
         self.data = data
         self.rank = rank
-        self.dvars = list(self.data.data_vars)
-        self.modes = list(self.data.dims)
+        self.dvars = [str(v) for v in self.data.data_vars]
+        self.modes = [str(d) for d in self.data.dims]
 
         ncoords = {}
         ndata = {}
@@ -181,7 +182,8 @@ class CoupledTensor():
             raise ValueError(f"khatri_rao(): {mode} is not in a mode in this dataset.")
         arrs = []  # save kr-ed arrays
         for dvar in self.mode_to_dvar[mode]:
-            recon = tl.tenalg.khatri_rao([self.x["_"+mmode].to_numpy() for mmode in self.dims[dvar] if mmode != mode])
+            recon = khatri_rao(
+                [self.x["_"+mmode].to_numpy() for mmode in self.dims[dvar] if mmode != mode])
             arrs.append(recon * self.x["_Weight_"].loc[dvar].to_numpy())    # put weights back to kr
         concat = np.concatenate(arrs, axis=0)
         if np.sum(np.isnan(concat)) > 0:
@@ -284,7 +286,7 @@ class CoupledTensor():
             ttdim = dat.ndim
             assert len(factors) == ttdim
             for m in range(ttdim):
-                no_include = np.all(np.isnan(dat), axis=tuple(np.delete(np.arange(ttdim), m)))
+                no_include = np.all(np.isnan(dat.to_numpy()), axis=tuple(int(i) for i in np.delete(np.arange(ttdim), m)))
                 for (ii, val) in enumerate(no_include):
                     if val:
                         factors[m].index.values[ii] = f"({factors[m].index.values[ii]})*"
