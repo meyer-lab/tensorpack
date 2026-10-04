@@ -69,6 +69,16 @@ ct.fit()
 ct.R2X(), ct.R2X("x")  # overall and per-array variance explained
 ```
 
+## Partial least squares
+
+`tensorpack.pls` contains tensor partial least squares (`tPLS`) and its coupled
+matrix-tensor factorization variant (`ctPLS`), moved over from the former
+`cmtf-pls` repository.
+
+```python
+from tensorpack.pls import tPLS, ctPLS
+```
+
 ## Development
 
 The project is managed with [uv](https://docs.astral.sh/uv/).
