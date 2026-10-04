@@ -152,15 +152,6 @@ wheels = [
 ]
 
 [[package]]
-name = "drawsvg"
-version = "2.4.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/86/ec/a88a29dc4e380c6283fa6922a21c715ec40bf40f7b53859f8a104a7cbe26/drawsvg-2.4.2.tar.gz", hash = "sha256:5efd8bcdc2c2400425e7fb71b4b80d8fdd83b1dc810f790f58a165df33ddd303", size = 733210, upload-time = "2026-08-12T03:24:43.679Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/15/5a/c47c10de42c49a3a9957123d77e5692b56b4fbc342b55285b52c41a8f1c1/drawsvg-2.4.2-py3-none-any.whl", hash = "sha256:b1c101e187aa395cb13c039549e4f26fb7b7ee03974f53dc9798436463781bf1", size = 44175, upload-time = "2026-08-12T03:24:42.531Z" },
-]
-
-[[package]]
 name = "fonttools"
 version = "4.65.0"
 source = { registry = "https://pypi.org/simple" }
@@ -698,7 +689,6 @@ name = "tensorpack"
 version = "0.1.2"
 source = { editable = "." }
 dependencies = [
-    { name = "drawsvg" },
     { name = "matplotlib" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -716,11 +706,11 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "tensordata" },
+    { name = "vulture" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "drawsvg", specifier = ">=2.4" },
     { name = "matplotlib", specifier = ">=3.5.0" },
     { name = "numpy", specifier = ">=1.21" },
     { name = "scikit-learn", specifier = ">=1.1.2" },
@@ -737,6 +727,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=3.0.0" },
     { name = "ruff", specifier = ">=0.6.4" },
     { name = "tensordata", git = "https://github.com/meyer-lab/tensordata.git?rev=7c52287" },
+    { name = "vulture", specifier = ">=2.16" },
 ]
 
 [[package]]
@@ -803,6 +794,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e4/31/3d74fa778a63b98b7374323befcc0be5ab3bd94afd4096a0124e7379152c/tzdata-2026.4.tar.gz", hash = "sha256:f1b8bd365d8d210c55353f4d7f8d6d8561c0ba50d704b700d195a9424bba0d79", size = 199350, upload-time = "2026-09-12T12:56:03.251Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f9/bc/8737e8d54cf51106118039b83f485a4783112fab49ea9d044b234978a46e/tzdata-2026.4-py2.py3-none-any.whl", hash = "sha256:c2169a8b0a7a5e9674da5a135ccdfb2b3e671b333ed9fed17b41f73c34476e81", size = 347494, upload-time = "2026-09-12T12:56:01.67Z" },
+]
+
+[[package]]
+name = "vulture"
+version = "2.16"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/3e/4d08c5903b2c0c70cad583c170cc4a663fc6a61e2ad00b711fcda61358cd/vulture-2.16.tar.gz", hash = "sha256:f8d9f6e2af03011664a3c6c240c9765b3f392917d3135fddca6d6a68d359f717", size = 52680, upload-time = "2026-03-25T14:41:27.141Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f5/be/f935130312330614811dae2ea9df3f395f6d63889eb6c2e68c14507152ee/vulture-2.16-py3-none-any.whl", hash = "sha256:6e0f1c312cef1c87856957e5c2ca9608834a7c794c2180477f30bf0e4cc58eee", size = 26993, upload-time = "2026-03-25T14:41:26.21Z" },
 ]
 
 [[package]]

@@ -11,5 +11,7 @@ jobs:
       uses: astral-sh/setup-uv@v10.0.1
     - name: Install dependencies
       run: uv sync
+    - name: Run vulture
+      run: make vulture
     - name: Test with pytest
       run: make test
