@@ -21,7 +21,7 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=3.0.0",
     "tensordata",
-    "pyright>=1.1.379",
+    "ty>=0.0.1",
     "ruff>=0.6.4",
 ]
 
@@ -36,3 +36,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["tensorpack"]
+
+[tool.ty.src]
+include = ["tensorpack"]
