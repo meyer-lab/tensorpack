@@ -12,6 +12,10 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
       - name: Setup environment
         run: make .venv
+      - name: Run ruff format
+        run: uv run ruff format --check .
+      - name: Run ruff check
+        run: uv run ruff check .
       - name: Run ty check
         run: make ty
       - name: Run vulture
