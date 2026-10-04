@@ -8,6 +8,9 @@ from numpy.linalg import norm
 from sklearn.decomposition import NMF
 from sklearn.utils.extmath import randomized_svd
 from tensorly.cp_tensor import CPTensor
+from tensorly.tenalg import (
+    khatri_rao,  # ty: ignore[unresolved-import]  # backend-dispatched at runtime
+)
 from tqdm import tqdm
 
 from .linalg import calcR2X_TnB, mlstsq
@@ -41,8 +44,8 @@ class CoupledTensor:
 
         self.data = data
         self.rank = rank
-        self.dvars = list(self.data.data_vars)
-        self.modes = list(self.data.dims)
+        self.dvars = [str(v) for v in self.data.data_vars]
+        self.modes = [str(d) for d in self.data.dims]
 
         ncoords = {}
         ndata = {}
@@ -233,7 +236,7 @@ class CoupledTensor:
             raise ValueError(f"khatri_rao(): {mode} is not in a mode in this dataset.")
         arrs = []  # save kr-ed arrays
         for dvar in self.mode_to_dvar[mode]:
-            recon = tl.tenalg.khatri_rao(
+            recon = khatri_rao(
                 [
                     self.x["_" + mmode].to_numpy()
                     for mmode in self.dims[dvar]
@@ -362,7 +365,8 @@ class CoupledTensor:
             assert len(factors) == ttdim
             for m in range(ttdim):
                 no_include = np.all(
-                    np.isnan(dat), axis=tuple(np.delete(np.arange(ttdim), m))
+                    np.isnan(dat.to_numpy()),
+                    axis=tuple(int(i) for i in np.delete(np.arange(ttdim), m)),
                 )
                 for ii, val in enumerate(no_include):
                     if val:

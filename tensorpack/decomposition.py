@@ -1,4 +1,6 @@
 import pickle
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 from tensorly.tenalg import svd_interface
@@ -28,7 +30,7 @@ class Decomposition:
         if matrix is None:
             matrix = [0]
         self.data = data
-        self.method = method
+        self.method: Callable[..., Any] = method
         self.rrs = np.arange(1, max_rr + 1)
         self.hasMatrix = False
         if isinstance(matrix, np.ndarray) and matrix.ndim == 2:

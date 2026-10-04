@@ -15,5 +15,9 @@ jobs:
       run: uv run ruff format --check .
     - name: Run ruff check
       run: uv run ruff check .
+    - name: Run ty check
+      run: make ty
+    - name: Run vulture
+      run: make vulture
     - name: Test with pytest
       run: make test

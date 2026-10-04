@@ -6,7 +6,10 @@ from copy import deepcopy
 
 import numpy as np
 import tensorly as tl
-from tensorly.tenalg import khatri_rao, svd_interface
+from tensorly.tenalg import (
+    khatri_rao,  # ty: ignore[unresolved-import]  # backend-dispatched at runtime
+    svd_interface,
+)
 from tqdm import tqdm
 
 from .linalg import calcR2X_TnB, mlstsq
