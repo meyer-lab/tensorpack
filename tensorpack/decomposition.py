@@ -1,3 +1,5 @@
+from typing import Any, Callable
+
 import pickle
 import numpy as np
 from .cmtf import perform_CP, calcR2X
@@ -23,7 +25,7 @@ class Decomposition():
             other methods include: tucker_decomp
         """
         self.data = data
-        self.method = method
+        self.method: Callable[..., Any] = method
         self.rrs = np.arange(1,max_rr+1)
         self.hasMatrix = False
         if isinstance(matrix, np.ndarray):
