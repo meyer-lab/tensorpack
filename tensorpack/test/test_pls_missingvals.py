@@ -1,13 +1,15 @@
 """Test the functions for dealing with missing values"""
 
-import pytest
 import numpy as np
+import pytest
 from numpy.linalg import norm
-from tensorly.tenalg import multi_mode_dot
+from tensorly.tenalg import (
+    multi_mode_dot,  # ty: ignore[unresolved-import]  # backend-dispatched at runtime
+)
 
-from tensorpack.pls.tpls import tPLS, calcR2X
-from tensorpack.pls.missingvals import miss_tensordot, miss_mmodedot
+from tensorpack.pls.missingvals import miss_mmodedot, miss_tensordot
 from tensorpack.pls.synthetic import import_synthetic
+from tensorpack.pls.tpls import calcR2X, tPLS
 
 
 def test_miss_tensordot():

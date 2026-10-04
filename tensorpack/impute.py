@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def create_missingness(tensor, drop):
     """
     Creates missingness for a full tensor. Slgihtly faster than entry_drop()
@@ -33,7 +34,9 @@ def entry_drop(tensor, drop, seed=None):
 
     midxs = np.zeros((tensor.ndim, max(tensor.shape)))
     for i in range(tensor.ndim):
-        midxs[i] = [1 for n in range(tensor.shape[i])] + [0 for m in range(len(midxs[i]) - tensor.shape[i])]
+        midxs[i] = [1 for n in range(tensor.shape[i])] + [
+            0 for m in range(len(midxs[i]) - tensor.shape[i])
+        ]
     modecounter = np.arange(tensor.ndim)
 
     # Remove bare minimum cube idxs from droppable values
@@ -42,12 +45,10 @@ def entry_drop(tensor, drop, seed=None):
         removable = False
         ran = np.random.choice(idxs.shape[0], 1)
         ranidx = idxs[ran][0]
-        counter = 0
-        for i in ranidx:
+        for counter, i in enumerate(ranidx):
             if midxs[modecounter[counter], i] > 0:
                 removable = True
             midxs[modecounter[counter], i] = 0
-            counter += 1
         if removable == True:
             idxs = np.delete(idxs, ran, axis=0)
     assert idxs.shape[0] >= drop
@@ -55,24 +56,28 @@ def entry_drop(tensor, drop, seed=None):
     # Drop values
     dropidxs = idxs[np.random.choice(idxs.shape[0], drop, replace=False)]
     dropidxs = [tuple(dropidxs[i]) for i in range(drop)]
-    for i in dropidxs: tensor[i] = np.nan
+    for i in dropidxs:
+        tensor[i] = np.nan
 
 
 def joint_entry_drop(big_tensor, small_tensor, drop, seed=None):
 
     if seed != None:
         np.random.seed(seed)
-    
+
     # Track chords for each mode to ensure bare minimum cube covers each chord at least once
     midxs1 = np.zeros((big_tensor.ndim, max(big_tensor.shape)))
     for i in range(big_tensor.ndim):
-        midxs1[i] = [1 for n in range(big_tensor.shape[i])] + [0 for m in range(len(midxs1[i]) - big_tensor.shape[i])]
+        midxs1[i] = [1 for n in range(big_tensor.shape[i])] + [
+            0 for m in range(len(midxs1[i]) - big_tensor.shape[i])
+        ]
     modecounter1 = np.arange(big_tensor.ndim)
 
     midxs2 = np.zeros((small_tensor.ndim, max(small_tensor.shape)))
     for i in range(small_tensor.ndim):
-        midxs2[i] = [1 for n in range(small_tensor.shape[i])] + [0 for m in
-                                                                 range(len(midxs2[i]) - small_tensor.shape[i])]
+        midxs2[i] = [1 for n in range(small_tensor.shape[i])] + [
+            0 for m in range(len(midxs2[i]) - small_tensor.shape[i])
+        ]
     modecounter2 = np.arange(small_tensor.ndim)
 
     # Remove bare minimum cube idxs from droppable values
@@ -81,12 +86,10 @@ def joint_entry_drop(big_tensor, small_tensor, drop, seed=None):
         removable = False
         ran = np.random.choice(idxs1.shape[0], 1)
         ranidx = idxs1[ran][0]
-        counter = 0
-        for i in ranidx:
+        for counter, i in enumerate(ranidx):
             if midxs1[modecounter1[counter], i] > 0:
                 removable = True
             midxs1[modecounter1[counter], i] = 0
-            counter += 1
         if removable == True:
             idxs1 = np.delete(idxs1, ran, axis=0)
 
@@ -95,12 +98,10 @@ def joint_entry_drop(big_tensor, small_tensor, drop, seed=None):
         removable = False
         ran = np.random.choice(idxs2.shape[0], 1)
         ranidx = idxs2[ran][0]
-        counter = 0
-        for i in ranidx:
+        for counter, i in enumerate(ranidx):
             if midxs2[modecounter2[counter], i] > 0:
                 removable = True
             midxs2[modecounter2[counter], i] = 0
-            counter += 1
         if removable == True:
             idxs2 = np.delete(idxs2, ran, axis=0)
 
@@ -133,7 +134,8 @@ def joint_entry_drop(big_tensor, small_tensor, drop, seed=None):
                 counter += 1
         dropidxs1 = np.delete(dropidxs1, 0, 1)
         dropidxs1 = [tuple(dropidxs1[i]) for i in range(tensor1_dropped)]
-        for i in dropidxs1: big_tensor[i] = np.nan
+        for i in dropidxs1:
+            big_tensor[i] = np.nan
     if tensor2_dropped > 0:
         dropidxs2 = np.zeros((tensor2_dropped, dropidxs.shape[1]), dtype=int)
         counter = 0
@@ -142,9 +144,11 @@ def joint_entry_drop(big_tensor, small_tensor, drop, seed=None):
                 dropidxs2[counter] = dropidxs[i]
                 counter += 1
         dropidxs2 = np.delete(dropidxs2, 0, 1)
-        for i in range(diff): dropidxs2 = np.delete(dropidxs2, -1, 1)
+        for i in range(diff):
+            dropidxs2 = np.delete(dropidxs2, -1, 1)
         dropidxs2 = [tuple(dropidxs2[i]) for i in range(tensor2_dropped)]
-        for i in dropidxs2: small_tensor[i] = np.nan
+        for i in dropidxs2:
+            small_tensor[i] = np.nan
 
 
 def chord_drop(tensor, drop, seed=None):
@@ -177,4 +181,3 @@ def chord_drop(tensor, drop, seed=None):
             dropidxs.append(tuple(np.insert(chordidx, 0, i).T))
         for i in range(chordlen):
             tensor[dropidxs[i]] = np.nan
-

@@ -4,12 +4,14 @@ from collections.abc import Mapping
 from copy import copy
 
 import numpy as np
-from numpy.linalg import norm, lstsq
-from tensorly.tenalg import multi_mode_dot
+from numpy.linalg import lstsq, norm
 from tensorly.decomposition._cp import parafac
+from tensorly.tenalg import (
+    multi_mode_dot,  # ty: ignore[unresolved-import]  # backend-dispatched at runtime
+)
 
+from .missingvals import miss_mmodedot, miss_tensordot
 from .util import calcR2X, factors_to_tensor
-from .missingvals import miss_tensordot, miss_mmodedot
 
 
 class ctPLS(Mapping, metaclass=ABCMeta):
@@ -48,9 +50,9 @@ class ctPLS(Mapping, metaclass=ABCMeta):
         for X in Xs:
             assert X.shape[0] == Y.shape[0]
             assert X.ndim >= 2
-            assert np.all(
-                np.any(np.isfinite(X), axis=0)
-            ), "Each measurement (chord) must have at least one sample."
+            assert np.all(np.any(np.isfinite(X), axis=0)), (
+                "Each measurement (chord) must have at least one sample."
+            )
         assert Y.ndim <= 2, "Only a matrix (2-mode tensor) Y is acceptable."
         if Y.ndim == 1:
             Y = Y.reshape(-1, 1)
@@ -83,8 +85,8 @@ class ctPLS(Mapping, metaclass=ABCMeta):
             (self.n_components, self.n_components)
         )  # a upper triangular matrix
 
-        self.R2Xs = [np.zeros((self.n_components)) for _ in range(self.Xs_len)]
-        self.R2Y = np.zeros((self.n_components))
+        self.R2Xs = [np.zeros(self.n_components) for _ in range(self.Xs_len)]
+        self.R2Y = np.zeros(self.n_components)
 
         self.Xs_mean = [np.nanmean(X, axis=0) for X in Xs]
         self.Y_mean = np.nanmean(Y, axis=0)
@@ -116,7 +118,12 @@ class ctPLS(Mapping, metaclass=ABCMeta):
                     Z_comp = [Z / norm(Z)]
                     if Z.ndim >= 2:
                         Z_comp = parafac(
-                            Z, 1, tol=tol, init="svd", normalize_factors=True
+                            Z,
+                            1,
+                            n_iter_max=max_iter,
+                            tol=tol,
+                            init="svd",
+                            normalize_factors=True,
                         )[1]
                         # TODO: add parafac allowing missing values
                     for ii in range(Z.ndim):
@@ -142,7 +149,7 @@ class ctPLS(Mapping, metaclass=ABCMeta):
                 self.Y_factors[0][:, a] = Y @ self.Y_factors[1][:, a]
                 if norm(oldU - self.Y_factors[0][:, a]) < tol:
                     if verbose:
-                        print("Comp {}: converged after {} iterations".format(a, iter))
+                        print(f"Comp {a}: converged after {iter} iterations")
                     break
                 oldU = self.Y_factors[0][:, a].copy()
 

@@ -3,13 +3,16 @@ from abc import ABCMeta
 from collections.abc import Mapping
 from copy import copy
 
-
 import numpy as np
-from numpy.linalg import norm, lstsq
-from tensorly.tenalg import multi_mode_dot, outer
+from numpy.linalg import lstsq, norm
 from tensorly.decomposition._cp import parafac
+from tensorly.tenalg import (
+    multi_mode_dot,  # ty: ignore[unresolved-import]  # backend-dispatched at runtime
+    outer,  # ty: ignore[unresolved-import]  # backend-dispatched at runtime
+)
+
+from .missingvals import miss_mmodedot, miss_tensordot
 from .util import calcR2X, factors_to_tensor
-from .missingvals import miss_tensordot, miss_mmodedot
 
 
 class tPLS(Mapping, metaclass=ABCMeta):
@@ -55,8 +58,8 @@ class tPLS(Mapping, metaclass=ABCMeta):
         self.X_factors = [np.zeros((lf, self.n_components)) for lf in X.shape]
         self.Y_factors = [np.zeros((lf, self.n_components)) for lf in Y.shape]
         # U takes the 1st column of Y
-        self.R2X = np.zeros((self.n_components))
-        self.R2Y = np.zeros((self.n_components))
+        self.R2X = np.zeros(self.n_components)
+        self.R2Y = np.zeros(self.n_components)
 
         self.X_hasMiss = np.any(np.isnan(X))
         if self.X_hasMiss:
@@ -83,9 +86,14 @@ class tPLS(Mapping, metaclass=ABCMeta):
                     Z = np.einsum("i...,i...->...", X, self.Y_factors[0][:, a])
                 Z_comp = [Z / norm(Z)]
                 if Z.ndim >= 2:
-                    Z_comp = parafac(Z, 1, tol=tol, init="svd", normalize_factors=True)[
-                        1
-                    ]
+                    Z_comp = parafac(
+                        Z,
+                        1,
+                        n_iter_max=max_iter,
+                        tol=tol,
+                        init="svd",
+                        normalize_factors=True,
+                    )[1]
                 for ii in range(Z.ndim):
                     self.X_factors[ii + 1][:, a] = Z_comp[ii].flatten()
 
@@ -102,7 +110,7 @@ class tPLS(Mapping, metaclass=ABCMeta):
                 self.Y_factors[0][:, a] = Y @ self.Y_factors[1][:, a]
                 if norm(oldU - self.Y_factors[0][:, a]) < tol:
                     if verbose:
-                        print("Comp {}: converged after {} iterations".format(a, iter))
+                        print(f"Comp {a}: converged after {iter} iterations")
                     break
                 oldU = self.Y_factors[0][:, a].copy()
 

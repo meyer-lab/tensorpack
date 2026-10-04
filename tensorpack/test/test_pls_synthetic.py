@@ -1,4 +1,5 @@
 import numpy as np
+
 from tensorpack.pls.synthetic import import_synthetic, make_synthetic_test
 
 TENSOR_DIMENSIONS = (100, 38, 65)
@@ -9,7 +10,7 @@ N_LATENT = 8
 def test_synthetic_dimensions():
     x, y, cp_tensor = import_synthetic(TENSOR_DIMENSIONS, N_RESPONSE, N_LATENT, error=0)
 
-    assert all([factor.shape[1] == N_LATENT for factor in cp_tensor.factors])
+    assert all(factor.shape[1] == N_LATENT for factor in cp_tensor.factors)
     assert cp_tensor.y_factor.shape[1] == N_LATENT
     assert x.shape == TENSOR_DIMENSIONS
     assert y.shape == (TENSOR_DIMENSIONS[0], N_RESPONSE)
@@ -17,21 +18,23 @@ def test_synthetic_dimensions():
 
 def test_synthetic_test_dimensions():
     n_test = 10
-    x, y, cp_tensor = import_synthetic(TENSOR_DIMENSIONS, N_RESPONSE, N_LATENT, error=0)
-    x_test, y_test, test_tensor = make_synthetic_test(cp_tensor, n_test, 0)
+    _x, _y, cp_tensor = import_synthetic(
+        TENSOR_DIMENSIONS, N_RESPONSE, N_LATENT, error=0
+    )
+    _x_test, _y_test, test_tensor = make_synthetic_test(cp_tensor, n_test, 0)
 
     assert cp_tensor.factors[0].shape[1] == test_tensor.factors[0].shape[1]
     assert test_tensor.factors[0].shape[0] == n_test
 
 
 def test_reproducibility():
-    x1, y1, cp_tensor1 = import_synthetic(
+    x1, y1, _cp_tensor1 = import_synthetic(
         TENSOR_DIMENSIONS, N_RESPONSE, N_LATENT, error=0, seed=42
     )
-    x2, y2, cp_tensor2 = import_synthetic(
+    x2, y2, _cp_tensor2 = import_synthetic(
         TENSOR_DIMENSIONS, N_RESPONSE, N_LATENT, error=0, seed=42
     )
-    x3, y3, cp_tensor3 = import_synthetic(
+    x3, y3, _cp_tensor3 = import_synthetic(
         TENSOR_DIMENSIONS, N_RESPONSE, N_LATENT, error=0, seed=43
     )
 

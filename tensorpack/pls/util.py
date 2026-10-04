@@ -1,7 +1,9 @@
 import numpy as np
 from numpy.linalg import norm
 from tensorly import fold
-from tensorly.tenalg import khatri_rao
+from tensorly.tenalg import (
+    khatri_rao,  # ty: ignore[unresolved-import]  # backend-dispatched at runtime
+)
 
 
 def calcR2X(X, Xhat):

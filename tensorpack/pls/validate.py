@@ -14,9 +14,9 @@ def get_q2y(pls_tensor):
     Returns:
         Q2Y (float): Q2Y of PLS tensor applied to fitted dataset.
     """
-    assert (
-        pls_tensor.original_X is not None
-    ), "PLS Tensor must be fit prior to calculating Q2Y"
+    assert pls_tensor.original_X is not None, (
+        "PLS Tensor must be fit prior to calculating Q2Y"
+    )
     X = pls_tensor.original_X
     Y = pls_tensor.original_Y
     q2y_plsr = tPLS(pls_tensor.n_components)

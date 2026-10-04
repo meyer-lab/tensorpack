@@ -2,13 +2,16 @@
 Testing Decomposition
 """
 
+import itertools
 import os
+
 import numpy as np
 import tensorly as tl
-from tensorly.random import random_cp
-from ..decomposition import Decomposition
-from ..cmtf import perform_CP, calcR2X
 from tensordata.atyeo import data as atyeo
+from tensorly.random import random_cp
+
+from ..cmtf import calcR2X, perform_CP
+from ..decomposition import Decomposition
 from ..SVD_impute import IterativeSVD
 from ..tucker import tucker_decomp
 
@@ -81,7 +84,7 @@ def test_tucker_ranks_bounded():
     assert ranks[0] == [1, 1, 1]
     assert ranks[-1] == max_rank
     assert len(ranks) == 1 + sum(m - 1 for m in max_rank)
-    for prev, cur in zip(ranks[:-1], ranks[1:]):
+    for prev, cur in itertools.pairwise(ranks):
         assert sum(c - p for p, c in zip(prev, cur)) == 1
         assert all(c >= p for p, c in zip(prev, cur))
     assert all(np.all(np.array(r) <= max_rank) for r in ranks)

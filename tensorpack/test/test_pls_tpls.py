@@ -1,14 +1,13 @@
-import pytest
 import numpy as np
+import pytest
+import tensorly as tl
 from numpy.testing import assert_allclose
 from sklearn.decomposition import PCA
-import tensorly as tl
 from tensorly.cp_tensor import CPTensor, cp_normalize
 from tensorly.metrics.factors import congruence_coefficient
 
 from tensorpack.pls.synthetic import import_synthetic
 from tensorpack.pls.tpls import tPLS
-
 
 TENSOR_DIMENSIONS = (100, 38, 65)
 N_RESPONSE = 4
@@ -29,7 +28,7 @@ def _get_standard_synthetic():
 
 
 def test_factor_normality():
-    x, y, _, pls = _get_standard_synthetic()
+    _x, _y, _, pls = _get_standard_synthetic()
     for x_factor in pls.X_factors[1:]:
         assert_allclose(tl.norm(x_factor, axis=0), 1)
     for y_factor in pls.Y_factors[1:]:
@@ -39,7 +38,7 @@ def test_factor_normality():
 # This method should test for factor hyper-orthogonality; components seem
 # very loosely hyper-orthogonal (cut-off of 1E-2 is generous).
 def test_factor_orthogonality():
-    x, y, _, pls = _get_standard_synthetic()
+    _x, _y, _, pls = _get_standard_synthetic()
     x_cp = CPTensor((None, pls.X_factors))
     x_cp = cp_normalize(x_cp)
 
@@ -52,7 +51,7 @@ def test_factor_orthogonality():
 
 
 def test_consistent_components():
-    x, y, _, pls = _get_standard_synthetic()
+    _x, _y, _, pls = _get_standard_synthetic()
 
     for x_factor in pls.X_factors:
         assert x_factor.shape[1] == N_LATENT

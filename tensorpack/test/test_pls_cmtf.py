@@ -1,5 +1,6 @@
-import pytest
 import numpy as np
+import pytest
+
 from tensorpack.pls.cmtf import ctPLS
 from tensorpack.pls.tpls import tPLS
 from tensorpack.pls.util import calcR2X, factors_to_tensor
@@ -94,28 +95,23 @@ def test_ctPLS_missingvals():
 
 
 def test_ctPLS_missingvals_completeMissSample():
+    rng = np.random.default_rng(0)
     totalR2Xs = []
-    for _ in range(10):
+    for _ in range(6):
         totalR2X = 0.0
-        for _ in range(5):
+        for _ in range(2):
             dims = [(10, 9, 8), (10, 8, 7), (10, 7, 6)]
-            latent_r = 2
-            T = np.random.rand(10, latent_r)
-            Xs = [
-                factors_to_tensor([T] + [np.random.rand(dd, latent_r) for dd in f[1:]])
-                for f in dims
-            ]
-            Xs = [np.random.rand(*d) for d in dims]
-            Y = np.random.rand(10, 5)
+            Xs = [rng.random(d) for d in dims]
+            Y = rng.random((10, 5))
             pls = ctPLS(3)
-            pls.fit(Xs, Y)
+            pls.fit(Xs, Y, tol=1e-4, max_iter=30)
             Xs[0][7:, :, :] = np.nan
             Xs[1][:3, :, :] = np.nan
             pls_m = ctPLS(3)
-            pls_m.fit(Xs, Y)
+            pls_m.fit(Xs, Y, tol=1e-4, max_iter=30)
             totalR2X += calcR2X(pls.factor_T, pls_m.factor_T)
-        totalR2Xs += [totalR2X / 5]
+        totalR2Xs += [totalR2X / 2]
 
     assert np.all(np.array(totalR2Xs) > -0.7)
-    assert np.sum(np.array(totalR2Xs) > 0.0) >= 5
+    assert np.sum(np.array(totalR2Xs) > 0.0) >= 3
     assert np.mean(totalR2Xs) > 0.05

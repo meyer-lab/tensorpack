@@ -48,6 +48,10 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["tensorpack"]
 
+[tool.ruff.lint.per-file-ignores]
+# Public module name kept for backwards compatibility.
+"tensorpack/SVD_impute.py" = ["N999"]
+
 [tool.pytest.ini_options]
 addopts = "-n auto"
 testpaths = ["tensorpack"]

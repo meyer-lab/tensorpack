@@ -1,17 +1,18 @@
-import pandas as pd
-import xarray as xr
 import numpy as np
-from .cmtf import perform_CP, calcR2X
-
-from matplotlib import gridspec, pyplot as plt
-from matplotlib.ticker import MaxNLocator
-import seaborn as sns
+import pandas as pd
 import scipy.cluster.hierarchy as sch
+import seaborn as sns
+import xarray as xr
+from matplotlib import gridspec
+from matplotlib import pyplot as plt
+from matplotlib.ticker import MaxNLocator
+
+from .cmtf import calcR2X, perform_CP
 
 
 def xplot_R2X(data: xr.DataArray, top_rank=12, ax=None, method=perform_CP):
     """Plot increasing rank R2X for CP"""
-    assert isinstance(data, xr.DataArray) or isinstance(data, np.ndarray)
+    assert isinstance(data, (xr.DataArray, np.ndarray))
     ranks = np.arange(1, min(np.min(data.shape), top_rank) + 1)
     R2Xs = []
 
@@ -35,8 +36,10 @@ def xplot_R2X(data: xr.DataArray, top_rank=12, ax=None, method=perform_CP):
     return (f, ax) if plt_indep else ax
 
 
-def xplot_components(data: xr.DataArray, rank: int, reorder=[]):
+def xplot_components(data: xr.DataArray, rank: int, reorder=None):
     """Plot the heatmaps of each components from an xarray-formatted data."""
+    if reorder is None:
+        reorder = []
     cp = perform_CP(data.to_numpy(), rank)
     ddims = len(data.dims)
     axes_names = list(data.dims)

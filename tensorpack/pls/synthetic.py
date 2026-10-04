@@ -1,15 +1,16 @@
 import numpy as np
 import tensorly as tl
+from tensorly.cp_tensor import CPTensor
 
 
 def make_synthetic_test(
-    cp_tensor: tl.cp_tensor, test_samples: int, error: float = 0, seed: int = 215
+    cp_tensor: CPTensor, test_samples: int, error: float = 0, seed: int = 215
 ):
     """
     Generates test set from given factors.
 
     Parameters:
-        cp_tensor (tl.cp_tensor): CP tensor
+        cp_tensor (CPTensor): CP tensor
         test_samples (int): samples in testing set
         error (float, default: 0): standard error of added gaussian noise
         seed (int, default: 215): seed for random number generator
@@ -24,11 +25,11 @@ def make_synthetic_test(
     test_factors = cp_tensor.factors
     test_factors[0] = rng.normal(0, 1, size=(test_samples, cp_tensor.rank))
     test_tensor = tl.cp_tensor.CPTensor((None, test_factors))
-    test_tensor.y_factor = cp_tensor.y_factor
+    test_tensor.y_factor = cp_tensor.y_factor  # ty: ignore[unresolved-attribute]
 
     x_test = tl.cp_to_tensor(test_tensor)
     x_test += rng.normal(0, error, size=test_tensor.shape)
-    y_test = tl.dot(test_tensor.factors[0], cp_tensor.y_factor.T)
+    y_test = tl.dot(test_tensor.factors[0], cp_tensor.y_factor.T)  # ty: ignore[unresolved-attribute]
     y_test += rng.normal(0, error, size=y_test.shape)
 
     return x_test, y_test, test_tensor
@@ -54,7 +55,7 @@ def import_synthetic(
     Returns:
         x (np.array): tensor of measurements
         y (np.array): response variables
-        cp_tensor (tl.cp_tensor): CP tensor of x, y
+        cp_tensor (CPTensor): CP tensor of x, y
     """
     rng = np.random.default_rng(seed)
 
@@ -65,12 +66,12 @@ def import_synthetic(
         x_factors.append(rng.normal(0, 1, size=(dimension, n_latent)))
 
     cp_tensor = tl.cp_tensor.CPTensor((None, x_factors))
-    cp_tensor.y_factor = y_factor
+    cp_tensor.y_factor = y_factor  # ty: ignore[unresolved-attribute]
 
     x = tl.cp_to_tensor(cp_tensor)
     x += rng.normal(0, error, size=train_dimensions)
 
-    y = tl.dot(cp_tensor.factors[0], cp_tensor.y_factor.T)
+    y = tl.dot(cp_tensor.factors[0], cp_tensor.y_factor.T)  # ty: ignore[unresolved-attribute]
     y += rng.normal(0, error, size=(train_dimensions[0], n_response))
 
     if y.shape[1] == 1:
