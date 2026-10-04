@@ -3,7 +3,9 @@ name = "tensorpack"
 version = "0.1.2"
 description = "A collection of tensor methods from the Meyer lab."
 authors = [{ name = "Cyrillus Tan", email = "cyztan@gmail.com" }]
+readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11,<3.13"
 dependencies = [
     "numpy>=1.21",
@@ -14,6 +16,10 @@ dependencies = [
     "xarray>=2024",
     "scikit-learn>=1.1.2",
 ]
+
+[project.urls]
+Homepage = "https://github.com/meyer-lab/tensorpack"
+Repository = "https://github.com/meyer-lab/tensorpack"
 
 [dependency-groups]
 docs = [
