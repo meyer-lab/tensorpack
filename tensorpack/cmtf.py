@@ -5,7 +5,7 @@ Coupled Matrix Tensor Factorization
 import numpy as np
 from tensorly.tenalg import svd_interface
 import tensorly as tl
-from tensorly.tenalg import khatri_rao
+from tensorly.tenalg import khatri_rao  # ty: ignore[unresolved-import]  # backend-dispatched at runtime
 from copy import deepcopy
 from tensorly.decomposition._cp import initialize_cp
 from tqdm import tqdm
