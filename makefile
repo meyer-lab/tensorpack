@@ -2,17 +2,20 @@
 
 all: test
 
-test:
-	uv run pytest -v -x
+test: .venv
+	uv run pytest -s -v -x
 
-ty:
+.venv:
+	uv sync
+
+ty: .venv
 	uv run ty check
 
-coverage.xml:
+coverage.xml: .venv
 	uv run pytest --junitxml=junit.xml --cov=tensorpack --cov-report xml:coverage.xml
 
 clean:
-	rm -rf coverage.xml
+	rm -rf coverage.xml junit.xml .coverage
 
-vulture:
+vulture: .venv
 	uv run vulture
