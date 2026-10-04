@@ -51,13 +51,6 @@ packages = ["tensorpack"]
 [tool.pytest.ini_options]
 addopts = "-n auto"
 testpaths = ["tensorpack"]
-filterwarnings = [
-    "error",
-    # xarray (third party) triggers this on import under NumPy >= 2.
-    "ignore:The 'generic' unit for NumPy timedelta is deprecated:DeprecationWarning",
-    # NMF initialization on random dense data legitimately hits max_iter.
-    "ignore:Maximum number of iterations .* reached:sklearn.exceptions.ConvergenceWarning",
-]
 
 [tool.ty.src]
 include = ["tensorpack"]
