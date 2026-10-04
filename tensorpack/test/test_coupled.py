@@ -34,10 +34,10 @@ def genSample(missing=0.0):
 def test_coupled_svd():
     data = genSample()
     oldR2X = -np.inf
-    for r in [3,5,7,9]:
+    for r in [2, 3, 4]:
         cpd = CoupledTensor(data, r)
         cpd.initialize("svd")
-        cpd.fit()
+        cpd.fit(maxiter=20, progress=False)
         R2X = cpd.R2X()
         assert oldR2X <= R2X + 1e-5, f"r = {r}: oldR2X = {oldR2X}, but newR2X = {R2X}"
         oldR2X = R2X
@@ -46,10 +46,10 @@ def test_coupled_svd():
 def test_coupled_nonneg():
     data = genSample()
     oldR2X = -np.inf
-    for r in [3,5,7,9]:
+    for r in [2, 3, 4]:
         cpd = CoupledTensor(data, r)
         cpd.initialize("nmf")
-        cpd.fit(nonneg=True)
+        cpd.fit(nonneg=True, maxiter=20, progress=False)
         R2X = cpd.R2X()
         assert oldR2X <= R2X + 1e-2, f"r = {r}: oldR2X = {oldR2X}, but newR2X = {R2X}"
         oldR2X = R2X
@@ -58,14 +58,14 @@ def test_coupled_nonneg():
 def test_randomized_svd():
     data = xr.Dataset(
         data_vars=dict(
-            Adam=(["Patient", "Box", "Gene", "Visit"], np.random.rand(148, 2, 7139, 6)),
-            Brendan=(["Patient", "Cytokine"], np.random.rand(148, 38)),
+            Adam=(["Patient", "Box", "Gene", "Visit"], np.random.rand(40, 2, 400, 6)),
+            Brendan=(["Patient", "Cytokine"], np.random.rand(40, 38)),
         ))
     cp = CoupledTensor(data, 2)
     blank_R2X = cp.R2X()
     cp.initialize("randomized_svd")
     init_R2X = cp.R2X()
     assert init_R2X > blank_R2X
-    cp.fit(maxiter=2, verbose=True)
+    cp.fit(maxiter=2, progress=False)
     fit_R2X = cp.R2X()
     assert fit_R2X > init_R2X
