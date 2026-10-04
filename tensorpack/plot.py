@@ -16,7 +16,7 @@ def tfacr2x(ax, decomp: Decomposition):
     Parameters
     ----------
     ax : axis object
-        Plot information for a subplot of figure f. See getSetup() in tensorpack.test.common.py for more detail.
+        Plot information for a subplot of figure f.
     decomp : Decomposition
         Takes a Decomposition object that has successfully run decomp.perform_tfac().
     """
